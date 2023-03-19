@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/LemonNekoGH/easiteraction-for-cadence/cmd/easi-gen/internal/gen"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/spf13/cobra"
 	"io"
 	"os"
@@ -13,13 +15,23 @@ var Version = "0.0.1"
 
 func doProcess(source io.Reader, output io.Writer, pkgName string) error {
 	// read cadence content
-	content := bytes.NewBuffer([]byte{})
-	_, err := io.Copy(content, source)
+	sInput := bytes.NewBuffer([]byte{})
+	_, err := io.Copy(sInput, source)
 	if err != nil {
 		return err
 	}
+	// parse cadence content
+	cdc, err := parser.ParseProgram(nil, sInput.Bytes(), parser.Config{})
+	if err != nil {
+		return err
+	}
+	// gen golang code
+	g := gen.NewGenerator(pkgName)
+	if err = g.Gen(cdc); err != nil {
+		return err
+	}
 	// output to writer
-	_, err = io.Copy(output, content)
+	_, err = io.Copy(output, g.GetOutput())
 	if err != nil {
 		return err
 	}

@@ -47,12 +47,9 @@ Go code:
 package mypackage
 
 import (
+	"context"
 	"fmt"
 	flowGrpc "github.com/onflow/flow-go-sdk/access/grpc"
-	flowSdk "github.com/onflow/flow-go-sdk"
-	flowCrypto "github.com/onflow/flow-go-sdk/crypto"
-	"github.com/onflow/cadence"
-	"strings"
 )
 
 type ContractUserProfiles struct {
@@ -64,9 +61,10 @@ type ContractUserProfiles struct {
 func NewUserProfilesContract(address string, flowCli flowGrpc.Client) (*ContractUserProfiles, error) {
 	// prepare script
 	script := fmt.Sprintf(`import UserProfiles from %s
-pub fun main(){}`, address)
+pub fun main(){}
+`, address)
 	// send a script to ensure contract address is correct
-	_, err := flowCli.ExecuteScriptAtLatestBlock(context.Background(), script, args)
+	_, err := flowCli.ExecuteScriptAtLatestBlock(context.Background(), []byte(script), nil)
 	if err != nil {
 		return nil, err
 	}
