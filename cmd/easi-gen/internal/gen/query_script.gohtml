@@ -1,4 +1,4 @@
-{{- /*gotype: github.com/LemonNekoGH/easiteraction-for-cadence/cmd/easi-gen/internal/gen.contractFunction*/ -}}
+{{- /*gotype: github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/gen.contractFunction*/ -}}
 import {{.ContractName}} from %s{{$commaCount := .CommaCountAll}}
 pub fun main({{range $i, $p := .Params}}arg{{$i}}: {{$p.Type}}{{if lt $i $commaCount}},{{end}}{{end}}){{if ne .ReturnType ""}}: {{.ReturnType}}{{end}}{
     return {{.ContractName}}.{{.Name}}({{range $i, $p := .Params}}arg{{$i}}{{if lt $i $commaCount}},{{end}}{{end}})

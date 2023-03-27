@@ -37,7 +37,7 @@ func Test_contractFunction_genCadenceScript(t *testing.T) {
 			},
 		}
 
-		generated, err := fn.genCadenceScript()
+		generated, err := fn.GenCadenceScript()
 		r.Empty(err)
 		a.Equal(`import AContract from %s
 transaction(arg1: UInt8) {
@@ -73,10 +73,10 @@ transaction(arg1: UInt8) {
 			ReturnType: "String",
 		}
 
-		generated, err := fn.genCadenceScript()
+		generated, err := fn.GenCadenceScript()
 		r.Empty(err)
 		a.Equal(`import AContract from %s
-fun main(arg0: Address,arg1: UInt8): String{
+pub fun main(arg0: Address,arg1: UInt8): String{
     return AContract.setSomething(arg0,arg1)
 }
 `, generated)

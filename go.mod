@@ -1,4 +1,4 @@
-module github.com/LemonNekoGH/easiteraction-for-cadence
+module github.com/LemonNekoGH/easinteraction-for-cadence
 
 go 1.19
 

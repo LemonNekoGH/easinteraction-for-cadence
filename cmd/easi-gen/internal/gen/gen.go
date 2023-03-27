@@ -4,7 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"errors"
-	"github.com/LemonNekoGH/easiteraction-for-cadence/pkg/string_utils"
+	"github.com/LemonNekoGH/easinteraction-for-cadence/pkg/string_utils"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"go/format"

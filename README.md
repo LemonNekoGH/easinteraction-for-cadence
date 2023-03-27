@@ -1,11 +1,17 @@
 # Easinteraction For Cadence(WIP)
+[![Contributors][contributors-shield]][contributors-url]
+[![Forks][forks-shield]][forks-url]
+[![Stargazers][stars-shield]][stars-url]
+[![Issues][issues-shield]][issues-url]
+[![MIT License][license-shield]][license-url]
+
 Easinteraction is a tool that help users to generate code for easier contract interaction.
 
 This version is for `Cadence(Flow Blockchain)` and `Golang`.
 ## Get Started
 ### Installation
 ```shell
-$ go install github.com/LemonNekoGH/easiteraction-for-cadence
+$ go install github.com/LemonNekoGH/easinteraction-for-cadence@latest
 ```
 ### Usage
 ```shell
@@ -49,16 +55,20 @@ package mypackage
 import (
 	"context"
 	"fmt"
+	"github.com/LemonNekoGH/godence"
+	"github.com/onflow/cadence"
+	flowSdk "github.com/onflow/flow-go-sdk"
 	flowGrpc "github.com/onflow/flow-go-sdk/access/grpc"
+	flowCrypto "github.com/onflow/flow-go-sdk/crypto"
 )
 
 type ContractUserProfiles struct {
 	address string
-	flowCli flowGrpc.Client
+	flowCli *flowGrpc.Client
 }
 
 // NewUserProfilesContract construct a new ContractUserProfiles instance.
-func NewUserProfilesContract(address string, flowCli flowGrpc.Client) (*ContractUserProfiles, error) {
+func NewUserProfilesContract(address string, flowCli *flowGrpc.Client) (*ContractUserProfiles, error) {
 	// prepare script
 	script := fmt.Sprintf(`import UserProfiles from %s
 pub fun main(){}
@@ -75,10 +85,10 @@ pub fun main(){}
 }
 
 // SetName will change Flow blockchain's state.
-// Signature: pub fun setName(_ acc: AuthAccount, _ name: String)
+// Signature: pub fun setName(user acc: AuthAccount,to name: String)
 func (c *ContractUserProfiles) SetName(
-	name string,
-	authorizer, payer, proposer flowSdk.Address,
+	arg1 string,
+	authorizer0, payer, proposer flowSdk.Address,
 	authorizerKeyIndex, payerKeyIndex, proposalKeyIndex int,
 	authorizerSigner, payerSigner flowCrypto.Signer,
 ) (*flowSdk.Identifier, error) {
@@ -94,31 +104,41 @@ func (c *ContractUserProfiles) SetName(
 	}
 	// gen script
 	script := fmt.Sprintf(`import UserProfiles from %s
-transaction {
-  prepare(acct: AuthAccount) {
-    UserProfiles.setName(acct, %s)
-  }
-}`, c.address, name)
+transaction(arg1: String) {
+    prepare(arg0: AuthAccount) {
+        UserProfiles.setName(user:arg0,to:arg1)
+    }
+}
+`, c.address)
 	// construct tx
 	tx := flowSdk.NewTransaction().
 		SetScript([]byte(script)).
-		AddAuthorizer(authorizer).
+		AddAuthorizer(authorizer0).
 		SetPayer(payer).
 		SetProposalKey(proposer, proposalKeyIndex, propAcct.Keys[proposalKeyIndex].SequenceNumber).
 		SetReferenceBlockID(block.ID).
 		SetGasLimit(9999)
 	// add argument
-	err = tx.AddArgument(cadence.NewString(name))
+	argCdc1, err := godence.ToCadence(
+		arg1,
+	)
 	if err != nil {
 		return nil, err
 	}
-	// sign payload
-	err = tx.SignPayload(authorizer, authorizerKeyIndex, authorizerSigner)
+	err = tx.AddArgument(argCdc1)
 	if err != nil {
 		return nil, err
+	}
+
+	if authorizer0.String() != payer.String() {
+		// sign payload
+		err = tx.SignPayload(authorizer0, authorizerKeyIndex, authorizerSigner)
+		if err != nil {
+			return nil, err
+		}
 	}
 	// sign envelop
-	err = tx.SignEnvelop(payer, payerKeyIndex, payerSigner)
+	err = tx.SignEnvelope(payer, payerKeyIndex, payerSigner)
 	if err != nil {
 		return nil, err
 	}
@@ -127,35 +147,74 @@ transaction {
 	if err != nil {
 		return nil, err
 	}
-	id := tx.ID
+	id := tx.ID()
 	return &id, nil
 }
 
 // GetName will query from Flow blockchain.
 // Signature: pub fun getName(_ addr: Address): String
-func (c *ContractUserProfiles) GetName(addr flowSdk.Address) (string, error) {
+func (c *ContractUserProfiles) GetName(
+	arg0 string,
+
+) (*string, error) {
 	// gen script
 	script := fmt.Sprintf(`import UserProfiles from %s
-fun main(_ addr: Address): String {
-    return UserProfiles.getName(addr)
-}`, c.address)
-	// prepare args
-	arg0I, err := hex.DecodeString(strings.TrimPrefix(addr.String(), "0x"))
-	if err != nil {
-		return "", err
-	}
-	arg0 := cadence.BytesToAddress(arg0I)
-	args := []cadence.Value{arg0}
-	// send query
-	result, err := c.flowCli.ExecuteScriptAtLatestBlock(context.Background(), script, args)
-	if err != nil {
-		return "", err
-	}
-	// covert result
-	ret, ok := result.ToGoValue().(string)
-	if !ok {
-		return "", fmt.Errorf("type error, expect: string, but got: %T", result.ToGoValue())
-	}
-	return ret, nil
+pub fun main(arg0: Address): String{
+    return UserProfiles.getName(arg0)
 }
+`, c.address)
+	// prepare args
+	args := []cadence.Value{}
+	argCdc0, err := godence.ToCadence(
+		godence.Address(arg0),
+	)
+	if err != nil {
+		return nil, err
+	}
+	args = append(args, argCdc0)
+	// send query
+	result, err := c.flowCli.ExecuteScriptAtLatestBlock(context.Background(), []byte(script), args)
+	if err != nil {
+		return nil, err
+	}
+
+	// covert result
+	var ret string
+	err = godence.ToGo(result, &ret)
+	if err != nil {
+		return nil, err
+	}
+	return &ret, nil
+
+}
+
 ```
+## Contributing
+
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
+Don't forget to give the project a star! Thanks again!
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+<!-- MARKDOWN LINKS & IMAGES -->
+<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
+[contributors-shield]: https://img.shields.io/github/contributors/LemonNekoGH/easinteraction-for-cadence.svg
+[contributors-url]: https://github.com/LemonNekoGH/easinteraction-for-cadence/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/LemonNekoGH/easinteraction-for-cadence.svg
+[forks-url]: https://github.com/LemonNekoGH/easinteraction-for-cadence/network/members
+[stars-shield]: https://img.shields.io/github/stars/LemonNekoGH/easinteraction-for-cadence.svg
+[stars-url]: https://github.com/LemonNekoGH/easinteraction-for-cadence/stargazers
+[issues-shield]: https://img.shields.io/github/issues/LemonNekoGH/easinteraction-for-cadence.svg
+[issues-url]: https://github.com/LemonNekoGH/easinteraction-for-cadence/issues
+[license-shield]: https://img.shields.io/github/license/LemonNekoGH/easinteraction-for-cadence.svg
+[license-url]: https://github.com/othneildrew/
+
+### Testing
+#### Requirements
+- [Flow CLI](https://docs.onflow.org/flow-cli/): Use to emulate Flow blockchain network.

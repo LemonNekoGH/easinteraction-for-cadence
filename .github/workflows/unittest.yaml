@@ -1,0 +1,69 @@
+name: Unit Test On Main
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  start:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send start message to telegram
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TG_TO }}
+          token: ${{ secrets.TG_TOKEN }}
+          format: markdown
+          message: |
+            GitHub Actions Start
+            Name: Godence
+            Url: https://github.com/LemonNekoGH/easinteraction-for-cadence
+            Trigger: `${{ github.event.ref }}` `${{ github.event.commits[0].id }}`
+  unittest:
+    needs: start
+    runs-on: ubuntu-latest
+    services:
+      # Set up flow emulator
+      flow-emulator:
+        image: gcr.io/flow-container-registry/emulator:0.34.1
+        ports:
+          - 3569:3569
+        env:
+          # set private key
+          FLOW_SERVICEPRIVATEKEY: c47db93881bc34a6155192c2bec0d124731e08ff105672afdb09892e3dc9ccae
+          # print more log
+          FLOW_VERBOSE: true
+    steps:
+      # checkout code
+      - uses: actions/checkout@v3
+      # set up go
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "1.18.x"
+      - name: Set up flow-cli
+        run: |
+          sh -ci "$(curl -fsSL https://storage.googleapis.com/flow-cli/install.sh)"
+          flow version
+      # Scan for protential mistakes
+      - name: Vet
+        run: |
+          go vet ./...
+      - name: Unit tests
+        run: |
+          go test $(go list ./...) -coverprofile coverage.txt -covermode atomic -p=1
+          go tool cover -func coverage.txt
+      # Codecov
+      - uses: codecov/codecov-action@v2
+      - name: Send end message to telegram
+        uses: appleboy/telegram-action@master
+        if: always()
+        with:
+          to: ${{ secrets.TG_TO }}
+          token: ${{ secrets.TG_TOKEN }}
+          format: markdown
+          message: |
+            GitHub Actions End
+            Name: Godence
+            Url: https://github.com/LemonNekoGH/easinteraction-for-cadence
+            Success: 
+            Trigger: `${{ github.event.ref }}` `${{ github.event.commits[0].id }}`

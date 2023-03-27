@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/LemonNekoGH/easiteraction-for-cadence/cmd/easi-gen/internal/gen"
+	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/gen"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/spf13/cobra"
 	"io"
