@@ -1,0 +1,139 @@
+{{- /*gotype: github.com/LemonNekoGH/easiteraction-for-cadence/cmd/easi-gen/internal/gen.contractType*/ -}}
+package {{.PkgName}}
+
+import (
+	"fmt"
+	"context"
+	flowGrpc "github.com/onflow/flow-go-sdk/access/grpc"
+	flowSdk "github.com/onflow/flow-go-sdk"
+	flowCrypto "github.com/onflow/flow-go-sdk/crypto"
+	"github.com/onflow/cadence"
+	"github.com/LemonNekoGH/godence"
+)
+
+type Contract{{.Name}} struct {
+	address string
+	flowCli *flowGrpc.Client
+}
+
+// New{{.Name}}Contract construct a new Contract{{.Name}} instance.
+func New{{.Name}}Contract(address string, flowCli *flowGrpc.Client) (*Contract{{.Name}}, error) {
+	// prepare script
+	script := fmt.Sprintf(`import {{.Name}} from %s
+pub fun main(){}
+`, address)
+	// send a script to ensure contract address is correct
+	_, err := flowCli.ExecuteScriptAtLatestBlock(context.Background(), []byte(script), nil)
+	if err != nil {
+		return nil, err
+	}
+	return &Contract{{.Name}}{
+		address: address,
+		flowCli: flowCli,
+	}, nil
+}
+
+{{$contractName := $.Name}}
+{{range $fn := .Functions}}
+{{$commaCountAll:=.CommaCountAll}}{{$commaCountAuth:=.CommaCountAuth}}{{$commaCountCommon:=.CommaCountCommon}}
+{{$needSendTx := gt .AuthorizerCount 0}}
+// {{$fn.GoName}} will {{if $needSendTx}}change Flow blockchain's state.{{else}}query from Flow blockchain.{{end}}
+// Signature: pub fun {{$fn.Name}}({{range $i, $p := $fn.Params}}{{$p.Label}} {{$p.Name}}: {{$p.Type}}{{if lt $i $commaCountAll}},{{end}}{{end}}){{if ne $fn.ReturnGoType ""}}: {{$fn.ReturnType}}{{end}}
+func (c *Contract{{$contractName}}) {{$fn.GoName}}(
+	{{range $i, $p := $fn.Params}}{{if ne $p.Type "AuthAccount"}}arg{{$i}} {{$p.GoType}},{{end}}{{end}}
+	{{if $needSendTx}}{{range $i, $p := $fn.Params}}{{if eq $p.Type "AuthAccount"}}authorizer{{$i}},{{end}}{{end}} payer, proposer flowSdk.Address,
+	authorizerKeyIndex, payerKeyIndex, proposalKeyIndex int,
+	authorizerSigner, payerSigner flowCrypto.Signer,{{end}}
+) ({{if $needSendTx}}*flowSdk.Identifier, error) {
+	// get reference id
+	block, err := c.flowCli.GetLatestBlock(context.Background(), true)
+	if err != nil {
+		return nil, err
+	}
+	// get proposer sequence number
+	propAcct, err := c.flowCli.GetAccount(context.Background(), proposer)
+	if err != nil {
+		return nil, err
+	}
+	// gen script
+	script := fmt.Sprintf(`{{$fn.GenCadenceScript}}`, c.address)
+	// construct tx
+	tx := flowSdk.NewTransaction().
+		SetScript([]byte(script)).
+		{{range $i, $p := $fn.Params}}
+		{{if eq $p.Type "AuthAccount"}}AddAuthorizer(authorizer{{$i}}).{{end}}{{end}}
+		SetPayer(payer).
+		SetProposalKey(proposer, proposalKeyIndex, propAcct.Keys[proposalKeyIndex].SequenceNumber).
+		SetReferenceBlockID(block.ID).
+		SetGasLimit(9999)
+	{{range $i, $p := $fn.Params}}{{if ne $p.Type "AuthAccount"}}// add argument
+	argCdc{{$i}}, err := godence.ToCadence(
+	{{- /* Special type mapping */ -}}
+	{{if eq $p.Type "Address"}}
+		godence.Address(arg{{$i}}),
+	{{else}}
+		arg{{$i}},
+	{{end}}
+	)
+	if err != nil {
+		return nil, err
+	}
+	err = tx.AddArgument(argCdc{{$i}})
+	if err != nil {
+		return nil, err
+	}
+	{{end}}{{end}}
+	if authorizer0.String() != payer.String() {
+		// sign payload
+		err = tx.SignPayload(authorizer0, authorizerKeyIndex, authorizerSigner)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// sign envelop
+	err = tx.SignEnvelope(payer, payerKeyIndex, payerSigner)
+	if err != nil {
+		return nil, err
+	}
+	// send
+	err = c.flowCli.SendTransaction(context.Background(), *tx)
+	if err != nil {
+		return nil, err
+	}
+	id := tx.ID()
+	return &id, nil{{else}}{{if ne $fn.ReturnGoType ""}}*{{$fn.ReturnGoType}},{{end}} error) {
+	// gen script
+	script := fmt.Sprintf(`{{$fn.GenCadenceScript}}`, c.address)
+	// prepare args
+	args := []cadence.Value{}
+	{{range $i, $p := $fn.Params}}argCdc{{$i}}, err := godence.ToCadence(
+		{{- /* Special type mapping */ -}}
+		{{if eq $p.Type "Address"}}
+			godence.Address(arg{{$i}}),
+		{{else}}
+			arg{{$i}},
+		{{end}}
+	)
+	if err != nil {
+		return nil, err
+	}
+	args = append(args, argCdc{{$i}}){{end}}
+	// send query
+	result, err := c.flowCli.ExecuteScriptAtLatestBlock(context.Background(), []byte(script), args)
+	if err != nil {
+		return nil, err
+	}
+	{{if ne $fn.ReturnGoType ""}}
+	// covert result
+	var ret {{$fn.ReturnGoType}}
+	err = godence.ToGo(result, &ret)
+	if err != nil {
+		return nil, err
+	}
+	return &ret, nil
+	{{else}}
+	return nil
+	{{end}}
+{{end}}
+}
+{{end}}

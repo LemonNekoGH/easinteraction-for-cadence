@@ -1,0 +1,7 @@
+{{- /*gotype: github.com/LemonNekoGH/easiteraction-for-cadence/cmd/easi-gen/internal/gen.contractFunction*/ -}}
+import {{.ContractName}} from %s{{$commaCountAll:=.CommaCountAll}}{{$commaCountAuth:=.CommaCountAuth}}{{$commaCountCommon:=.CommaCountCommon}}
+transaction({{range $i, $p := .Params}}{{if ne $p.Type "AuthAccount"}}arg{{$i}}: {{$p.Type}}{{if lt $i $commaCountCommon}},{{end}}{{end}}{{end}}) {
+    prepare({{range $i, $p := .Params}}{{if eq $p.Type "AuthAccount"}}arg{{$i}}: {{$p.Type}}{{if lt $i $commaCountAuth}},{{end}}{{end}}{{end}}) {
+        {{.ContractName}}.{{.Name}}({{range $i, $p := .Params}}{{if ne $p.Label "_"}}{{$p.Label}}:{{end}}arg{{$i}}{{if lt $i $commaCountAll}},{{end}}{{end}})
+    }
+}

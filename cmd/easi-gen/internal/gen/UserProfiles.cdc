@@ -1,7 +1,7 @@
 pub contract UserProfiles {
     access(self) let usernames: {Address:String}
 
-    pub fun setName(_ acc: AuthAccount, _ name: String) {
+    pub fun setName(user acc: AuthAccount, to name: String) {
         self.usernames[acc.address] = name
     }
 
