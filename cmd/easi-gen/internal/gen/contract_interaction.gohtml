@@ -115,22 +115,22 @@ func (c *Contract{{$contractName}}) {{$fn.GoName}}(
 		{{end}}
 	)
 	if err != nil {
-		return nil, err
+		return ret, err
 	}
 	args = append(args, argCdc{{$i}}){{end}}
 	// send query
 	result, err := c.flowCli.ExecuteScriptAtLatestBlock(context.Background(), []byte(script), args)
 	if err != nil {
-		return nil, err
+		return ret, err
 	}
 	{{if ne $fn.ReturnGoType ""}}
 	// covert result
 	var ret {{$fn.ReturnGoType}}
 	err = godence.ToGo(result, &ret)
 	if err != nil {
-		return nil, err
+		return ret, err
 	}
-	return &ret, nil
+	return ret, nil
 	{{else}}
 	return nil
 	{{end}}

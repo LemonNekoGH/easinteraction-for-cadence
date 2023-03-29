@@ -87,7 +87,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if *name != "LemonNeko" {
+	if name != "LemonNeko" {
 		panic(err)
 	}
 }
