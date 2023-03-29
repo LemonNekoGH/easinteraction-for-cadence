@@ -42,8 +42,8 @@ pub fun main(){}
 func (c *Contract{{$contractName}}) {{$fn.GoName}}(
 	{{range $i, $p := $fn.Params}}{{if ne $p.Type "AuthAccount"}}arg{{$i}} {{$p.GoType}},{{end}}{{end}}
 	{{if $needSendTx}}{{range $i, $p := $fn.Params}}{{if eq $p.Type "AuthAccount"}}authorizer{{$i}},{{end}}{{end}} payer, proposer flowSdk.Address,
-	authorizerKeyIndex, payerKeyIndex, proposalKeyIndex int,
-	authorizerSigner, payerSigner flowCrypto.Signer,{{end}}
+	{{range $i, $p := $fn.Params}}{{if eq $p.Type "AuthAccount"}}authorizer{{$i}}KeyIndex,{{end}}{{end}} payerKeyIndex, proposalKeyIndex int,
+	{{range $i, $p := $fn.Params}}{{if eq $p.Type "AuthAccount"}}authorizer{{$i}}Signer,{{end}}{{end}} payerSigner flowCrypto.Signer,{{end}}
 ) ({{if $needSendTx}}*flowSdk.Identifier, error) {
 	// get reference id
 	block, err := c.flowCli.GetLatestBlock(context.Background(), true)
@@ -83,13 +83,15 @@ func (c *Contract{{$contractName}}) {{$fn.GoName}}(
 		return nil, err
 	}
 	{{end}}{{end}}
-	if authorizer0.String() != payer.String() {
+	{{range $i, $p := $fn.Params}}{{if eq $p.Type "AuthAccount"}}
+	if authorizer{{$i}}.String() != payer.String() {
 		// sign payload
-		err = tx.SignPayload(authorizer0, authorizerKeyIndex, authorizerSigner)
+		err = tx.SignPayload(authorizer{{$i}}, authorizer{{$i}}KeyIndex, authorizer{{$i}}Signer)
 		if err != nil {
 			return nil, err
 		}
 	}
+	{{end}}{{end}}
 	// sign envelop
 	err = tx.SignEnvelope(payer, payerKeyIndex, payerSigner)
 	if err != nil {
