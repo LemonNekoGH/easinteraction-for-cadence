@@ -1,6 +1,10 @@
-package gen
+package typeconv
 
-import "github.com/onflow/cadence"
+import (
+	"fmt"
+	"github.com/onflow/cadence"
+	"strings"
+)
 
 var (
 	typeMap = map[string]string{
@@ -32,3 +36,25 @@ var (
 		cadence.TheAnyResourceType.ID():    "any",
 	}
 )
+
+// MaybeMapType checks param is Cadence map or not.
+func MaybeMapType(cdcType string) (bool, string) {
+	if cdcType[0] != '{' || cdcType[len(cdcType)-1] != '}' {
+		// not map
+		return false, ""
+	}
+	typesStr := cdcType[1 : len(cdcType)-1]
+	types := strings.Split(typesStr, ":")
+	keyType := types[0]
+	valueType := cdcType[len(keyType)+2 : len(cdcType)-1]
+	return true, fmt.Sprintf("map[%s]%s", ByName(keyType), ByName(valueType))
+}
+
+// ByName receives Cadence type name then returns corresponding Go type name.
+func ByName(cdcType string) string {
+	t := strings.TrimSpace(cdcType) // because map type name will be like {String: String}, there is a space character before value type
+	if ok, t := MaybeMapType(t); ok {
+		return t
+	}
+	return typeMap[t]
+}

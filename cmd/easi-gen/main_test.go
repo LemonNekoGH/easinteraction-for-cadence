@@ -90,6 +90,22 @@ func main() {
 	if name != "LemonNeko" {
 		panic(err)
 	}
+	// set avatar
+	_, err = c.SetAvatar("ForTwitter", "https://example.com/avatars/lemonneko", addr, addr, addr, 0, 0, 0, signer, signer)
+	if err != nil {
+		panic(err)
+	}
+	// get avatar
+	avatars, err := c.GetAllAvatars("0xf8d6e0586b0a20c7")
+	if err != nil {
+		panic(err)
+	}
+	if avatars["ForTwitter"] != "https://example.com/avatars/lemonneko" {
+		panic(err)
+	}
+	if len(avatars) != 1 {
+		panic(err)
+	}
 }
 `)
 	m, err := os.Create(dir + string(filepath.Separator) + "main.go")

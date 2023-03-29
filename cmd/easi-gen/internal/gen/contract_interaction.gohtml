@@ -103,7 +103,8 @@ func (c *Contract{{$contractName}}) {{$fn.GoName}}(
 		return nil, err
 	}
 	id := tx.ID()
-	return &id, nil{{else}}{{if ne $fn.ReturnGoType ""}}*{{$fn.ReturnGoType}},{{end}} error) {
+	return &id, nil{{else}}{{if ne $fn.ReturnGoType ""}}{{$fn.ReturnGoType}},{{end}} error) {
+	{{if ne $fn.IsReturnMap true}}var ret {{$fn.ReturnGoType}}{{else}}ret := {{$fn.ReturnGoType}}{}{{end}}
 	// gen script
 	script := fmt.Sprintf(`{{$fn.GenCadenceScript}}`, c.address)
 	// prepare args
@@ -127,8 +128,7 @@ func (c *Contract{{$contractName}}) {{$fn.GoName}}(
 	}
 	{{if ne $fn.ReturnGoType ""}}
 	// covert result
-	var ret {{$fn.ReturnGoType}}
-	err = godence.ToGo(result, &ret)
+	err = godence.ToGo(result, {{if ne $fn.IsReturnMap true}}&{{end}}ret)
 	if err != nil {
 		return ret, err
 	}

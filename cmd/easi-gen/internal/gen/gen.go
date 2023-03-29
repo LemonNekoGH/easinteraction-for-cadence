@@ -5,9 +5,11 @@ import (
 	_ "embed"
 	"errors"
 	"github.com/LemonNekoGH/easinteraction-for-cadence/pkg/string_utils"
+	"github.com/LemonNekoGH/easinteraction-for-cadence/pkg/typeconv"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"go/format"
+	"strings"
 	"text/template"
 )
 
@@ -51,6 +53,10 @@ type contractType struct {
 	PkgName   string
 	Name      string
 	Functions []contractFunction
+}
+
+func (fn *contractFunction) IsReturnMap() bool {
+	return strings.HasPrefix(fn.ReturnGoType, "map")
 }
 
 func (fn *contractFunction) AuthorizerCount() int {
@@ -161,7 +167,7 @@ func (g *Generator) collectContractInfos() contractType {
 		retType := f.ReturnTypeAnnotation
 		if retType != nil {
 			contractFn.ReturnType = retType.Type.String()
-			contractFn.ReturnGoType = typeMap[retType.Type.String()]
+			contractFn.ReturnGoType = typeconv.ByName(contractFn.ReturnType)
 		}
 		// travel all params
 		var params []functionParam
@@ -170,7 +176,7 @@ func (g *Generator) collectContractInfos() contractType {
 				Name:   p.Identifier.String(),
 				Label:  p.Label,
 				Type:   p.TypeAnnotation.Type.String(),
-				GoType: typeMap[p.TypeAnnotation.Type.String()],
+				GoType: typeconv.ByName(p.TypeAnnotation.Type.String()),
 			})
 		}
 		contractFn.Params = params
