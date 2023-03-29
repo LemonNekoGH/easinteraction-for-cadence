@@ -106,6 +106,17 @@ func main() {
 	if len(avatars) != 1 {
 		panic(err)
 	}
+	// get avatar names
+	avatarNames, err := c.GetAllAvatarNames("0xf8d6e0586b0a20c7")
+	if err != nil {
+		panic(err)
+	}
+	if avatarNames[0] != "ForTwitter" {
+		panic(err)
+	}
+	if len(avatarNames) != 1 {
+		panic(err)
+	}
 }
 `)
 	m, err := os.Create(dir + string(filepath.Separator) + "main.go")

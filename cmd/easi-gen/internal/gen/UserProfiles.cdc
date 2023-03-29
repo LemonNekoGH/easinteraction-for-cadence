@@ -20,6 +20,10 @@ pub contract UserProfiles {
         return self.avatars[addr] ?? {}
     }
 
+    pub fun getAllAvatarNames(_ addr: Address): [String] {
+        return self.getAllAvatars(addr).keys
+    }
+
     init() {
         self.usernames = {}
         self.avatars = {}

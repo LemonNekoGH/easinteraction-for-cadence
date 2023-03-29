@@ -27,3 +27,32 @@ func Test_maybeMapType(t *testing.T) {
 		}
 	})
 }
+
+func TestMaybeArrayType(t *testing.T) {
+	for k, v := range typeMap {
+		typeName := fmt.Sprintf("[%s]", k)
+		t.Run(fmt.Sprintf("simple array: %s", typeName), func(t *testing.T) {
+			ok, goName := MaybeArrayType(typeName)
+			expected := fmt.Sprintf("[]%s", v)
+			if !ok || goName != expected {
+				t.Errorf("expected: %v, %s, got: %v, %s", true, expected, ok, goName)
+			}
+		})
+	}
+
+	t.Run("nested array: [[[String]]]", func(t *testing.T) {
+		ok, goName := MaybeArrayType("[[[String]]]")
+		expected := "[][][]string"
+		if !ok || goName != expected {
+			t.Errorf("expected: %v, %s, got: %v, %s", true, expected, ok, goName)
+		}
+	})
+
+	t.Run("fixed size array", func(t *testing.T) {
+		ok, goName := MaybeArrayType("[String; 4]")
+		expected := "[4]string"
+		if !ok || goName != expected {
+			t.Errorf("expected: %v, %s, got: %v, %s", true, expected, ok, goName)
+		}
+	})
+}
