@@ -1,8 +1,8 @@
-name: Unit Test On Main
+name: Publish
 on:
   push:
-    branches:
-      - main
+    tags:
+      - '*'
 
 jobs:
   start:
@@ -19,41 +19,19 @@ jobs:
             Workflow Name: ${{ github.workflow }}
             Url: https://github.com/LemonNekoGH/easinteraction-for-cadence
             Trigger: `${{ github.event.ref }}` `${{ github.event.commits[0].id }}`
-  unittest:
+  buildpublish:
     needs: start
     runs-on: ubuntu-latest
-    services:
-      # Set up flow emulator
-      flow-emulator:
-        image: gcr.io/flow-container-registry/emulator:0.34.1
-        ports:
-          - 3569:3569
-        env:
-          # set private key
-          FLOW_SERVICEPRIVATEKEY: c47db93881bc34a6155192c2bec0d124731e08ff105672afdb09892e3dc9ccae
-          # print more log
-          FLOW_VERBOSE: true
     steps:
       # checkout code
       - uses: actions/checkout@v3
-      # set up go
-      - uses: actions/setup-go@v2
-        with:
-          go-version: "1.18.x"
-      - name: Set up flow-cli
-        run: |
-          sh -ci "$(curl -fsSL https://storage.googleapis.com/flow-cli/install.sh)"
-          flow version
-      # Scan for protential mistakes
-      - name: Vet
-        run: |
-          go vet ./...
-      - name: Unit tests
-        run: |
-          go test $(go list ./...) -coverprofile coverage.txt -covermode atomic -p=1
-          go tool cover -func coverage.txt
-      # Codecov
-      - uses: codecov/codecov-action@v2
+      # setup brew
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+      # bump version if exists
+      - name: bump version if exists
+        run: brew install easi-gen && brew bump-formula-pr --url https://github.com/LemonNekoGH/easinteraction-for-cadence/archive/refs/tags/${{ github.event.ref }}.tar.gz
       - name: Send end message to telegram
         uses: appleboy/telegram-action@master
         if: always()
@@ -65,5 +43,4 @@ jobs:
             GitHub Actions End
             Workflow Name: ${{ github.workflow }}
             Url: https://github.com/LemonNekoGH/easinteraction-for-cadence
-            Success: 
             Trigger: `${{ github.event.ref }}` `${{ github.event.commits[0].id }}`
