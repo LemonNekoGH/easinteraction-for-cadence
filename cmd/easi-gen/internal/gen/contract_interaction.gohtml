@@ -8,7 +8,7 @@ import (
 	flowSdk "github.com/onflow/flow-go-sdk"
 	flowCrypto "github.com/onflow/flow-go-sdk/crypto"
 	"github.com/onflow/cadence"
-	"github.com/LemonNekoGH/godence"
+	"github.com/lemonnekogh/godence"
 )
 
 type Contract{{.Name}} struct {
@@ -120,7 +120,8 @@ func (c *Contract{{$contractName}}) {{$fn.GoName}}(
 	if err != nil {
 		return ret, err
 	}
-	args = append(args, argCdc{{$i}}){{end}}
+	args = append(args, argCdc{{$i}})
+	{{end}}
 	// send query
 	result, err := c.flowCli.ExecuteScriptAtLatestBlock(context.Background(), []byte(script), args)
 	if err != nil {

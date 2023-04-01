@@ -117,6 +117,14 @@ func main() {
 	if len(avatarNames) != 1 {
 		panic(err)
 	}
+	// get not exists avatar
+	notExists, err := c.GetAvatarByName("0xf8d6e0586b0a20c7", "NotExists")
+	if err != nil {
+		panic(err)
+	}
+	if notExists != "" {
+		panic(err)
+	}
 }
 `)
 	m, err := os.Create(dir + string(filepath.Separator) + "main.go")
@@ -175,7 +183,7 @@ func main() {
 		"github.com/onflow/flow-go-sdk",
 		"github.com/onflow/flow-go-sdk/crypto",
 		"github.com/onflow/cadence",
-		"github.com/LemonNekoGH/godence",
+		"github.com/lemonnekogh/godence",
 		"google.golang.org/grpc",
 	}
 	for _, d := range depMods {

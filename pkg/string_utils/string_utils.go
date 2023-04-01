@@ -1,6 +1,8 @@
 package string_utils
 
-import "strings"
+import (
+	"strings"
+)
 
 // FirstLetterUppercase makes the first letter of string uppercase
 func FirstLetterUppercase(s string) string {

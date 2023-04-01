@@ -38,9 +38,17 @@ var (
 	}
 )
 
+// MaybeOptionalType checks param is Cadence optional type or not
+func MaybeOptionalType(cdcType string) (bool, string) {
+	if !strings.HasSuffix(cdcType, "?") {
+		return false, ""
+	}
+	return true, ByName(strings.TrimSuffix(cdcType, "?"))
+}
+
 // MaybeMapType checks param is Cadence map or not.
 func MaybeMapType(cdcType string) (bool, string) {
-	if cdcType[0] != '{' || cdcType[len(cdcType)-1] != '}' {
+	if !strings.HasPrefix(cdcType, "{") || !strings.HasSuffix(cdcType, "}") {
 		// not map
 		return false, ""
 	}
@@ -53,7 +61,7 @@ func MaybeMapType(cdcType string) (bool, string) {
 
 // MaybeArrayType checks param is Cadence array or not.
 func MaybeArrayType(cdcType string) (bool, string) {
-	if cdcType[0] != '[' || cdcType[len(cdcType)-1] != ']' {
+	if !strings.HasPrefix(cdcType, "[") || !strings.HasSuffix(cdcType, "]") {
 		// not array
 		return false, ""
 	}
@@ -76,6 +84,9 @@ func ByName(cdcType string) string {
 		return t2
 	}
 	if ok, t2 := MaybeArrayType(cdcType); ok {
+		return t2
+	}
+	if ok, t2 := MaybeOptionalType(cdcType); ok {
 		return t2
 	}
 	return typeMap[t]

@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Send start message to telegram
         uses: appleboy/telegram-action@master
-        if: ${{ github.event_name != "pull_request" }}
+        if: ${{ github.event_name != 'pull_request' }}
         with:
           to: ${{ secrets.TG_TO }}
           token: ${{ secrets.TG_TOKEN }}
@@ -65,7 +65,7 @@ jobs:
       - uses: codecov/codecov-action@v2
       - name: Send end message to telegram
         uses: appleboy/telegram-action@master
-        if: ${{ github.event_name != "pull_request" }}
+        if: ${{ github.event_name != 'pull_request' }}
         with:
           to: ${{ secrets.TG_TO }}
           token: ${{ secrets.TG_TOKEN }}
