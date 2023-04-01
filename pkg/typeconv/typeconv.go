@@ -40,7 +40,7 @@ var (
 
 // MaybeOptionalType checks param is Cadence optional type or not
 func MaybeOptionalType(cdcType string) (bool, string) {
-	if strings.HasSuffix(cdcType, "?") {
+	if !strings.HasSuffix(cdcType, "?") {
 		return false, ""
 	}
 	return true, ByName(strings.TrimSuffix(cdcType, "?"))
@@ -84,6 +84,9 @@ func ByName(cdcType string) string {
 		return t2
 	}
 	if ok, t2 := MaybeArrayType(cdcType); ok {
+		return t2
+	}
+	if ok, t2 := MaybeOptionalType(cdcType); ok {
 		return t2
 	}
 	return typeMap[t]
