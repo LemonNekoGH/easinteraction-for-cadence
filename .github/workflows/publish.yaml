@@ -29,7 +29,7 @@ jobs:
           token: ${{ secrets.PAT }}
       - uses: LemonNekoGH/update-homebrew-formula-action@v0.1.0
         with:
-          tag: '${{ github.event.ref_name }}'
+          tag: '${{ github.ref_name }}'
           description: Help users to generate code for easier contract interaction
           formula-name: EasiGen
           command-name: easi-gen
