@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          repository: LemonNekoGH/easinteraction-for-cadence
+          repository: LemonNekoGH/tap
           token: ${{ secrets.PAT }}
       - uses: LemonNekoGH/update-homebrew-formula-action@v0.1.0
         with:
