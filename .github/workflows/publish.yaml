@@ -44,8 +44,8 @@ jobs:
           git config user.email ${{ github.event.pusher.email }}
           git config user.name ${{ github.event.pusher.name }}
           git add Formula/easi-gen.rb
-          git commit -m '[AUTO] Bump easi-gen version to ${{ github.event.ref }}'
-          git push
+          git commit -m '[AUTO] Bump easi-gen version to ${{ github.ref_name }}'
+          git push origin HEAD:main
 
       - name: Send end message to telegram
         uses: appleboy/telegram-action@master
