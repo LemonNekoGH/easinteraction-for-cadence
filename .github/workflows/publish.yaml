@@ -19,19 +19,32 @@ jobs:
             Workflow Name: ${{ github.workflow }}
             Url: https://github.com/LemonNekoGH/easinteraction-for-cadence
             Trigger: `${{ github.event.ref }}` `${{ github.event.commits[0].id }}`
-  buildpublish:
+  publish:
     needs: start
     runs-on: ubuntu-latest
     steps:
-      # checkout code
       - uses: actions/checkout@v3
-      # setup brew
-      - name: Set up Homebrew
-        id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@master
-      # bump version if exists
-      - name: bump version if exists
-        run: brew install easi-gen && brew bump-formula-pr --url https://github.com/LemonNekoGH/easinteraction-for-cadence/archive/refs/tags/${{ github.event.ref }}.tar.gz
+        with:
+          repository: 'https://github.com/LemonNekoGH/easinteraction-for-cadence'
+          token: ${{ secrets.PAT }}
+      - uses: LemonNekoGH/update-homebrew-formula-action@v0.1.0
+        with:
+          tag: ${{ github.event.ref }}
+          description: Help users to generate code for easier contract interaction
+          formula-name: EasiGen
+          command-name: easi-gen
+          url: https://github.com/LemonNekoGH/easinteraction-for-cadence
+          homepage: https://github.com/LemonNekoGH/easinteraction-for-cadence
+          license-name: MIT
+          build-type: Go
+          main: ./cmd/easi-gen/main.go
+          ldflags: -X 'main.Version=#{version}'
+      - name: Commit and push
+        run: |
+          git add Formula/easi-gen.rb
+          git commit -m '[AUTO] Bump easi-gen version to ${{ github.event.ref }}'
+          git push
+
       - name: Send end message to telegram
         uses: appleboy/telegram-action@master
         if: always()

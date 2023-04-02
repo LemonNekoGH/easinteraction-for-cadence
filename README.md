@@ -12,6 +12,9 @@ This version is for `Cadence(Flow Blockchain)` and `Golang`.
 ### Installation
 ```shell
 $ go install github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen@latest
+# or use brew if you do not have go installed
+$ brew tap LemonNekoGH/tap
+$ brew install easi-gen
 ```
 ### Usage
 ```shell
