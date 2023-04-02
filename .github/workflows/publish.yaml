@@ -18,7 +18,7 @@ jobs:
             GitHub Actions Start
             Workflow Name: ${{ github.workflow }}
             Url: https://github.com/LemonNekoGH/easinteraction-for-cadence
-            Trigger: `${{ github.event.ref }}` `${{ github.event.commits[0].id }}`
+            Trigger: `${{ github.event.ref_name }}` `${{ github.event.commits[0].id }}`
   publish:
     needs: start
     runs-on: ubuntu-latest
@@ -27,6 +27,7 @@ jobs:
         with:
           repository: LemonNekoGH/easinteraction-for-cadence
           token: ${{ secrets.PAT }}
+      - run: echo "tag ${{ github.event.ref_name }}"
       - uses: LemonNekoGH/update-homebrew-formula-action@v0.1.0
         with:
           tag: ${{ github.event.ref_name }}
