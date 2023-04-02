@@ -16,6 +16,7 @@ $ go install github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen@late
 $ brew tap LemonNekoGH/tap
 $ brew install easi-gen
 ```
+[Homebrew](https://brew.sh/) is a package manager for macOS.
 ### Usage
 ```shell
 $ easi-gen --source NekosMerge.cdc --output nekosmerge.go --pkg-name nekosmerge
