@@ -18,20 +18,35 @@ jobs:
             GitHub Actions Start
             Workflow Name: ${{ github.workflow }}
             Url: https://github.com/LemonNekoGH/easinteraction-for-cadence
-            Trigger: `${{ github.event.ref }}` `${{ github.event.commits[0].id }}`
-  buildpublish:
+            Trigger: `${{ github.ref_name }}` `${{ github.event.commits[0].id }}`
+  publish:
     needs: start
     runs-on: ubuntu-latest
     steps:
-      # checkout code
       - uses: actions/checkout@v3
-      # setup brew
-      - name: Set up Homebrew
-        id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@master
-      # bump version if exists
-      - name: bump version if exists
-        run: brew install easi-gen && brew bump-formula-pr --url https://github.com/LemonNekoGH/easinteraction-for-cadence/archive/refs/tags/${{ github.event.ref }}.tar.gz
+        with:
+          repository: LemonNekoGH/tap
+          token: ${{ secrets.PAT }}
+      - uses: LemonNekoGH/update-homebrew-formula-action@v0.1.0
+        with:
+          tag: '${{ github.ref_name }}'
+          description: Help users to generate code for easier contract interaction
+          formula-name: EasiGen
+          command-name: easi-gen
+          url: https://github.com/LemonNekoGH/easinteraction-for-cadence
+          homepage: https://github.com/LemonNekoGH/easinteraction-for-cadence
+          license-name: MIT
+          build-type: Go
+          main: ./cmd/easi-gen/main.go
+          ldflags: -X 'main.Version=#{version}'
+      - name: Commit and push
+        run: |
+          git config user.email ${{ github.event.pusher.email }}
+          git config user.name ${{ github.event.pusher.name }}
+          git add Formula/easi-gen.rb
+          git commit -m '[AUTO] Bump easi-gen version to ${{ github.ref_name }}'
+          git push origin HEAD:main
+
       - name: Send end message to telegram
         uses: appleboy/telegram-action@master
         if: always()
@@ -43,4 +58,4 @@ jobs:
             GitHub Actions End
             Workflow Name: ${{ github.workflow }}
             Url: https://github.com/LemonNekoGH/easinteraction-for-cadence
-            Trigger: `${{ github.event.ref }}` `${{ github.event.commits[0].id }}`
+            Trigger: `${{ github.ref_name }}` `${{ github.event.commits[0].id }}`
