@@ -9,8 +9,7 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - '**/*.go'
+    # should not limit to go file, because the unittest is required status check
 
 jobs:
   start:
