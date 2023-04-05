@@ -5,8 +5,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	"os"
 	"os/exec"
@@ -14,6 +12,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 //go:embed internal/gen/UserProfiles.cdc
@@ -198,7 +199,7 @@ func main() {
 	r.Empty(err)
 	time.Sleep(5 * time.Second)
 	// deploy
-	out, err = exec.Command("bash", "-c", fmt.Sprintf("cd %s && flow deploy", dir)).CombinedOutput()
+	out, err = exec.Command("bash", "-c", fmt.Sprintf("cd %s && flow deploy --update", dir)).CombinedOutput() // if failed at this line, go to system process manager and kill it
 	fmt.Printf("%s\n", out)
 	r.Empty(err)
 	// run test program
