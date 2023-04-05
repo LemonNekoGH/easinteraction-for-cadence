@@ -8,7 +8,7 @@ import (
 )
 
 func Test_contractFunction_commaCountAll(t *testing.T) {
-	c := contractFunction{}
+	c := compositeTypeFunction{}
 	assert.Equal(t, -1, c.CommaCountAll())
 }
 
@@ -17,10 +17,10 @@ func Test_contractFunction_genCadenceScript(t *testing.T) {
 		a := assert.New(t)
 		r := require.New(t)
 
-		fn := contractFunction{
-			ContractName: "AContract",
-			Name:         "setSomething",
-			GoName:       "SetSomething",
+		fn := compositeTypeFunction{
+			OwnerTypeName: "AContract",
+			Name:          "setSomething",
+			GoName:        "SetSomething",
 			Params: []functionParam{
 				{
 					Label:  "firstArg",
@@ -52,10 +52,10 @@ transaction(arg1: UInt8) {
 		a := assert.New(t)
 		r := require.New(t)
 
-		fn := contractFunction{
-			ContractName: "AContract",
-			Name:         "setSomething",
-			GoName:       "SetSomething",
+		fn := compositeTypeFunction{
+			OwnerTypeName: "AContract",
+			Name:          "setSomething",
+			GoName:        "SetSomething",
 			Params: []functionParam{
 				{
 					Label:  "firstArg",

@@ -39,27 +39,41 @@ type functionParam struct {
 	GoType string
 }
 
-type contractFunction struct {
-	ContractName    string
-	Name            string
-	GoName          string // first letter uppercase
-	Params          []functionParam
-	ReturnType      string
-	ReturnGoType    string
-	GeneratedScript []byte
+type compositeTypeFunction struct {
+	OwnerTypeName string
+	Name          string
+	GoName        string // first letter uppercase
+	Params        []functionParam
+	ReturnType    string
+	ReturnGoType  string
 }
 
 type contractType struct {
 	PkgName   string
 	Name      string
-	Functions []contractFunction
+	Functions []compositeTypeFunction
+	SubTypes  []CustomType // all nested types will flatten into this field
 }
 
-func (fn *contractFunction) IsReturnMap() bool {
+type compositeTypeField struct {
+	Name   string
+	Type   string
+	GoType string
+}
+
+type CustomType struct {
+	Name       string
+	GoName     string
+	IsResource string
+	Fields     []compositeTypeField
+	Functions  []compositeTypeFunction
+}
+
+func (fn *compositeTypeFunction) IsReturnMap() bool {
 	return strings.HasPrefix(fn.ReturnGoType, "map")
 }
 
-func (fn *contractFunction) AuthorizerCount() int {
+func (fn *compositeTypeFunction) AuthorizerCount() int {
 	var ret int
 	for _, p := range fn.Params {
 		if p.Type == "AuthAccount" {
@@ -69,7 +83,7 @@ func (fn *contractFunction) AuthorizerCount() int {
 	return ret
 }
 
-func (fn *contractFunction) GenCadenceScript() (string, error) {
+func (fn *compositeTypeFunction) GenCadenceScript() (string, error) {
 	var (
 		t   *template.Template
 		err error
@@ -96,17 +110,17 @@ func (fn *contractFunction) GenCadenceScript() (string, error) {
 }
 
 // CommaCountAll returns length of all params - 1, used to check necessary for comma adding.
-func (fn *contractFunction) CommaCountAll() int {
+func (fn *compositeTypeFunction) CommaCountAll() int {
 	return len(fn.Params) - 1
 }
 
 // CommaCountCommon returns length of all common params - 1, used to check necessary for comma adding.
-func (fn *contractFunction) CommaCountCommon() int {
+func (fn *compositeTypeFunction) CommaCountCommon() int {
 	return len(fn.Params) - fn.AuthorizerCount() - 1
 }
 
 // CommaCountAuth returns length of all auth params - 1, used to check necessary for comma adding.
-func (fn *contractFunction) CommaCountAuth() int {
+func (fn *compositeTypeFunction) CommaCountAuth() int {
 	return fn.AuthorizerCount() - 1
 }
 
@@ -150,7 +164,7 @@ func (g *Generator) collectContractInfos() contractType {
 		Name:    g.contract.Identifier.String(),
 	}
 	// travel all public functions
-	var fns []contractFunction
+	var fns []compositeTypeFunction
 	for _, m := range g.contract.DeclarationMembers().Declarations() {
 		// skip not function or not public
 		if m.DeclarationKind() != common.DeclarationKindFunction || m.DeclarationAccess() != ast.AccessPublic {
@@ -158,10 +172,10 @@ func (g *Generator) collectContractInfos() contractType {
 		}
 		f := m.(*ast.FunctionDeclaration)
 		fnName := f.Identifier.String()
-		contractFn := contractFunction{
-			ContractName: contract.Name,
-			Name:         fnName,
-			GoName:       string_utils.FirstLetterUppercase(fnName),
+		contractFn := compositeTypeFunction{
+			OwnerTypeName: contract.Name,
+			Name:          fnName,
+			GoName:        string_utils.FirstLetterUppercase(fnName),
 		}
 		// get return type
 		retType := f.ReturnTypeAnnotation
