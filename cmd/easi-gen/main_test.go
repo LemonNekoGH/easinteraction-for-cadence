@@ -42,6 +42,7 @@ import (
 	flowCrypto "github.com/onflow/flow-go-sdk/crypto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"github.com/lemonnekogh/godence"
 	"example/contracts"
 	"time"
 )
@@ -78,7 +79,7 @@ func main() {
 	}
 	// set name
 	addr := flowSdk.HexToAddress("0xf8d6e0586b0a20c7")
-	_, err = c.SetName("LemonNeko", addr, addr, addr, 0, 0, 0, signer, signer)
+	id, err := c.SetName("LemonNeko", addr, addr, addr, 0, 0, 0, signer, signer)
 	if err != nil {
 		panic(err)
 	}
@@ -91,12 +92,25 @@ func main() {
 	if name != "LemonNeko" {
 		panic(err)
 	}
+	result, err := flowCli.GetTransactionResult(context.Background(), *id)
+	if err != nil {
+		panic(err)
+	}
+	var usernameUpdateEvent contracts.EventUsernameUpdate
+	err = godence.ToGo(result.Events[0].Value, &usernameUpdateEvent)
+	if err != nil {
+		panic(err)
+	}
+	if usernameUpdateEvent.Name != "LemonNeko" {
+		panic(err)
+	}
 	// set avatar
 	_, err = c.SetAvatar("ForTwitter", "https://example.com/avatars/lemonneko", addr, addr, addr, 0, 0, 0, signer, signer)
 	if err != nil {
 		panic(err)
 	}
 	time.Sleep(1*time.Second)
+	// check result
 	// get avatar
 	avatars, err := c.GetAllAvatars("0xf8d6e0586b0a20c7")
 	if err != nil {
