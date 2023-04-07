@@ -1,0 +1,124 @@
+package main
+
+import (
+	"context"
+	"example/contracts"
+	"github.com/lemonnekogh/godence"
+	flowSdk "github.com/onflow/flow-go-sdk"
+	flowGrpc "github.com/onflow/flow-go-sdk/access/grpc"
+	flowCrypto "github.com/onflow/flow-go-sdk/crypto"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"time"
+)
+
+var flowCli *flowGrpc.Client
+
+func initFlowClient() {
+	client, err := flowGrpc.NewClient(
+		"localhost:3569",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		panic(err)
+	}
+	err = client.Ping(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	flowCli = client
+}
+func main() {
+	initFlowClient()
+	c, err := contracts.NewContractUserProfiles("0xf8d6e0586b0a20c7", flowCli)
+	if err != nil {
+		panic(err)
+	}
+	// get signer
+	privateKey, err := flowCrypto.DecodePrivateKeyHex(flowCrypto.ECDSA_P256, "c47db93881bc34a6155192c2bec0d124731e08ff105672afdb09892e3dc9ccae")
+	if err != nil {
+		panic(err)
+	}
+	signer, err := flowCrypto.NewInMemorySigner(privateKey, flowCrypto.SHA3_256)
+	if err != nil {
+		panic(err)
+	}
+	// set name
+	addr := flowSdk.HexToAddress("0xf8d6e0586b0a20c7")
+	id, err := c.SetName("LemonNeko", addr, addr, addr, 0, 0, 0, signer, signer)
+	if err != nil {
+		panic(err)
+	}
+	time.Sleep(1 * time.Second)
+	// get name
+	name, err := c.GetName("0xf8d6e0586b0a20c7")
+	if err != nil {
+		panic(err)
+	}
+	if name != "LemonNeko" {
+		panic(err)
+	}
+	result, err := flowCli.GetTransactionResult(context.Background(), *id)
+	if err != nil {
+		panic(err)
+	}
+	var usernameUpdateEvent contracts.EventUsernameUpdate
+	err = godence.ToGo(result.Events[0].Value, &usernameUpdateEvent)
+	if err != nil {
+		panic(err)
+	}
+	if usernameUpdateEvent.Name != "LemonNeko" {
+		panic(err)
+	}
+	// set avatar
+	_, err = c.SetAvatar("ForTwitter", "https://example.com/avatars/lemonneko", addr, addr, addr, 0, 0, 0, signer, signer)
+	if err != nil {
+		panic(err)
+	}
+	time.Sleep(1 * time.Second)
+	// check result
+	// get avatar
+	avatars, err := c.GetAllAvatars("0xf8d6e0586b0a20c7")
+	if err != nil {
+		panic(err)
+	}
+	if avatars["ForTwitter"] != "https://example.com/avatars/lemonneko" {
+		panic(err)
+	}
+	if len(avatars) != 1 {
+		panic(err)
+	}
+	// get avatar names
+	avatarNames, err := c.GetAllAvatarNames("0xf8d6e0586b0a20c7")
+	if err != nil {
+		panic(err)
+	}
+	if avatarNames[0] != "ForTwitter" {
+		panic(err)
+	}
+	if len(avatarNames) != 1 {
+		panic(err)
+	}
+	// get not exists avatar
+	notExists, err := c.GetAvatarByName("0xf8d6e0586b0a20c7", "NotExists")
+	if err != nil {
+		panic(err)
+	}
+	if notExists != "" {
+		panic(err)
+	}
+	// set head pictures
+	_, err = c.SetHeaderPics("url1", "url2", "url3", addr, addr, addr, 0, 0, 0, signer, signer)
+	if err != nil {
+		panic(err)
+	}
+	time.Sleep(1 * time.Second)
+	// get head pictures
+	pics, err := c.GetHeaderPics("0xf8d6e0586b0a20c7")
+	if err != nil {
+		panic(err)
+	}
+	if pics.SmallUrl != "url1" || pics.MediumUrl != "url2" || pics.BigUrl != "url3" {
+		panic(err)
+	}
+}
