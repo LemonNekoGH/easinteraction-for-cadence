@@ -3,13 +3,13 @@ package types
 import (
 	"bytes"
 	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/gen/templates"
+	"github.com/onflow/cadence/runtime/common"
 	"strings"
 	"text/template"
 )
 
 type CompositeType interface {
-	IsStruct() bool
-	IsResource() bool
+	Kind() common.CompositeKind
 	GetFields() []Field
 	SetFields(fields []Field)
 	GetFunctions() []Function
@@ -46,12 +46,8 @@ func (c *compositeTypeImpl) SetFields(fields []Field) {
 	c.fields = fields
 }
 
-func (c *compositeTypeImpl) IsStruct() bool {
-	return false
-}
-
-func (c *compositeTypeImpl) IsResource() bool {
-	return false
+func (c *compositeTypeImpl) Kind() common.CompositeKind {
+	return common.CompositeKindUnknown
 }
 
 func (c *compositeTypeImpl) GetSubTypes() []CompositeType {
@@ -105,6 +101,10 @@ func flattenSubTypes(com CompositeType) []CompositeType {
 	return subTypes
 }
 
+func (c *Contract) Kind() common.CompositeKind {
+	return common.CompositeKindContract
+}
+
 // FlattenSubTypes move all subtypes to contracts subtypes
 func (c *Contract) FlattenSubTypes() {
 	c.SetSubTypes(flattenSubTypes(c))
@@ -114,8 +114,8 @@ type Struct struct {
 	compositeTypeImpl
 }
 
-func (s *Struct) IsStruct() bool {
-	return true
+func (s *Struct) Kind() common.CompositeKind {
+	return common.CompositeKindStructure
 }
 
 func (s *Struct) GetGoName() string {
@@ -126,12 +126,24 @@ type Resource struct {
 	compositeTypeImpl
 }
 
-func (r *Resource) IsResource() bool {
-	return true
+func (r *Resource) Kind() common.CompositeKind {
+	return common.CompositeKindResource
 }
 
 func (r *Resource) GetGoName() string {
 	return "Resource" + r.name
+}
+
+type Event struct {
+	compositeTypeImpl
+}
+
+func (*Event) Kind() common.CompositeKind {
+	return common.CompositeKindEvent
+}
+
+func (e *Event) GetGoName() string {
+	return "Event" + e.name
 }
 
 type Field struct {

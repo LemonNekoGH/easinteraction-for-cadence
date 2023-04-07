@@ -1,43 +1,37 @@
 package types
 
 import (
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func TestStruct_IsStructOrIsResource(t *testing.T) {
+func TestStruct_Kind(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
 		s := &Struct{}
-		if !s.IsStruct() || s.IsResource() {
-			t.Fail()
-		}
-		assert.True(t, s.IsStruct())
-		assert.False(t, s.IsResource())
+		assert.Equal(t, common.CompositeKindStructure, s.Kind())
 	})
 
 	t.Run("as super type", func(t *testing.T) {
 		var s CompositeType
 		s = &Struct{}
-		if !s.IsStruct() || s.IsResource() {
-			t.Fail()
-		}
-		assert.True(t, s.IsStruct())
-		assert.False(t, s.IsResource())
+		assert.Equal(t, common.CompositeKindStructure, s.Kind())
 	})
 }
 
-func TestResource_IsStructOrIsResource(t *testing.T) {
+func TestResource_Kind(t *testing.T) {
 	s := &Resource{}
-	if s.IsStruct() || !s.IsResource() {
-		t.Fail()
-	}
+	assert.Equal(t, common.CompositeKindResource, s.Kind())
 }
 
-func TestContract_IsStructOrIsResource(t *testing.T) {
+func TestContract_Kind(t *testing.T) {
 	s := &Contract{}
-	if s.IsStruct() || s.IsResource() {
-		t.Fail()
-	}
+	assert.Equal(t, common.CompositeKindContract, s.Kind())
+}
+
+func TestEvent_Kind(t *testing.T) {
+	s := &Event{}
+	assert.Equal(t, common.CompositeKindEvent, s.Kind())
 }
 
 func TestContract_FlattenSubTypes(t *testing.T) {

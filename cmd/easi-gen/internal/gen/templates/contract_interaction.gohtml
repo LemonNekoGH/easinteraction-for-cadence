@@ -13,7 +13,7 @@ import (
 
 {{define "CompositeType"}}
 type {{.GetGoName}} struct {
-	{{if and (not .IsResource) (not .IsStruct)}}
+	{{if eq .Kind 3}}
 	address string
 	flowCli *flowGrpc.Client
 	{{else}}
@@ -24,14 +24,14 @@ type {{.GetGoName}} struct {
 }
 
 {{- /* Only for contracts */ -}}
-{{if and (not .IsResource) (not .IsStruct)}}
+{{if eq .Kind 3}}
 // New{{.GetGoName}} construct a new {{.GetGoName}} instance.
 func New{{.GetGoName}}(address string, flowCli *flowGrpc.Client) (*{{.GetGoName}}, error) {
 	// prepare script
 	script := fmt.Sprintf(`import {{.GetName}} from %s
-pub fun main(){{ if or .IsResource .IsStruct }}: String{
+pub fun main(){{ if ne .Kind 3 }}: String{
 	// check if type exists
-	return Type<{{if eq .IsResource true}}{{end}}{{.GetName}}>().identifier
+	return Type<{{if eq .Kind 2}}@{{end}}{{.GetName}}>().identifier
 }{{else}}{}{{end}}
 `, address)
 	// send a script to ensure contract address is correct

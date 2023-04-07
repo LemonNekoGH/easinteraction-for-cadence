@@ -11,12 +11,15 @@ pub contract UserProfiles {
         }
     }
 
+    pub event UsernameUpdate(_ name: String)
+
     priv let usernames: {Address:String}
     priv let avatars: {Address:{String:String}}
     priv let headerPics: {Address: HeaderPictures}
 
     pub fun setName(user acc: AuthAccount, to name: String) {
         self.usernames[acc.address] = name
+        emit UsernameUpdate(name)
     }
 
     pub fun getName(_ addr: Address): String {

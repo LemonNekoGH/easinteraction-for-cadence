@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"errors"
+	"fmt"
 	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/gen/templates"
 	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/types"
 	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/pkg/string_utils"
@@ -74,7 +75,11 @@ func collectCompositeType(cd *ast.CompositeDeclaration, ownerType string) types.
 	cdKind := cd.DeclarationKind()
 	for _, m := range cd.DeclarationMembers().Declarations() {
 		// skip not public
-		if m.DeclarationAccess() != ast.AccessPublic && m.DeclarationAccess() != ast.AccessPublicSettable {
+		fmt.Printf("name: %s, type: %s, access: %s\n", m.DeclarationIdentifier(), m.DeclarationKind().Name(), m.DeclarationAccess().Keyword())
+		if m.DeclarationAccess() != ast.AccessPublic &&
+			m.DeclarationAccess() != ast.AccessPublicSettable &&
+			// event initializer has no name and no access keyword
+			m.DeclarationKind() != common.DeclarationKindInitializer {
 			continue
 		}
 		mKind := m.DeclarationKind()
@@ -84,8 +89,8 @@ func collectCompositeType(cd *ast.CompositeDeclaration, ownerType string) types.
 			f := m.(*ast.FunctionDeclaration)
 			contractFn := collectFunctions(f, name)
 			fns = append(fns, contractFn)
-		// struct or resource
-		case mKind == common.DeclarationKindStructure, mKind == common.DeclarationKindResource:
+		// struct, resource, event
+		case mKind == common.DeclarationKindStructure, mKind == common.DeclarationKindResource, mKind == common.DeclarationKindEvent:
 			d := m.(*ast.CompositeDeclaration)
 			subType := collectCompositeType(d, ownerTypeForSubType)
 			subTypes = append(subTypes, subType)
@@ -94,16 +99,23 @@ func collectCompositeType(cd *ast.CompositeDeclaration, ownerType string) types.
 			f := m.(*ast.FieldDeclaration)
 			field := collectField(f)
 			fields = append(fields, field)
+		// event initializer
+		case mKind == common.DeclarationKindInitializer && cdKind == common.DeclarationKindEvent:
+			f := m.(*ast.SpecialFunctionDeclaration)
+			fields = collectEventInitializer(f)
 		}
 	}
 
 	var c types.CompositeType
-	if cd.DeclarationKind() == common.DeclarationKindStructure {
+	switch cd.DeclarationKind() {
+	case common.DeclarationKindStructure:
 		c = &types.Struct{}
-	} else if cd.DeclarationKind() == common.DeclarationKindResource {
+	case common.DeclarationKindResource:
 		c = &types.Resource{}
-	} else {
+	case common.DeclarationKindContract:
 		c = &types.Contract{}
+	case common.DeclarationKindEvent:
+		c = &types.Event{}
 	}
 	c.SetFields(fields)
 	c.SetFunctions(fns)
@@ -111,6 +123,22 @@ func collectCompositeType(cd *ast.CompositeDeclaration, ownerType string) types.
 	c.SetName(name)
 	c.SetOwnerType(ownerType)
 	return c
+}
+
+// event initializer is function, but it's field in TransactionResult.Event
+func collectEventInitializer(s *ast.SpecialFunctionDeclaration) []types.Field {
+	f := s.FunctionDeclaration
+	// travel all params
+	var fields []types.Field
+	for _, p := range f.ParameterList.Parameters {
+		fmt.Printf("name: %s, type: %s\n", p.Identifier.String(), p.TypeAnnotation.Type.String())
+		fields = append(fields, types.Field{
+			Name:   p.Identifier.String(),
+			GoName: string_utils.FirstLetterUppercase(p.Identifier.String()),
+			Type:   p.TypeAnnotation.Type.String(),
+		})
+	}
+	return fields
 }
 
 func collectField(f *ast.FieldDeclaration) types.Field {
