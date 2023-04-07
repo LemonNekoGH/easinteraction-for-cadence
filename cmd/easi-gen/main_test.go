@@ -17,8 +17,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//go:embed internal/gen/UserProfiles.cdc
-var userProfilesCdc []byte
+var (
+	//go:embed internal/gen/UserProfiles.cdc
+	userProfilesCdc []byte
+	//go:embed internal/gen/templates/main.gohtml
+	mainGo string
+	//go:embed internal/gen/templates/flow.json
+	flowJson string
+)
 
 func Test_runCommand(t *testing.T) {
 	a := assert.New(t)
@@ -34,129 +40,7 @@ func Test_runCommand(t *testing.T) {
 		r.Empty(err)
 	}()
 	// write sources
-	mainContent := strings.NewReader(`package main
-import (
-	"context"
-	flowGrpc "github.com/onflow/flow-go-sdk/access/grpc"
-	flowSdk "github.com/onflow/flow-go-sdk"
-	flowCrypto "github.com/onflow/flow-go-sdk/crypto"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"github.com/lemonnekogh/godence"
-	"example/contracts"
-	"time"
-)
-
-var flowCli *flowGrpc.Client
-func initFlowClient() {
-	client, err := flowGrpc.NewClient(
-		"localhost:3569",
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		panic(err)
-	}
-	err = client.Ping(context.Background())
-	if err != nil {
-		panic(err)
-	}
-	flowCli = client
-}
-func main() {
-	initFlowClient()
-	c, err := contracts.NewContractUserProfiles("0xf8d6e0586b0a20c7", flowCli)
-	if err != nil {
-		panic(err)
-	}
-	// get signer
-	privateKey, err := flowCrypto.DecodePrivateKeyHex(flowCrypto.ECDSA_P256, "c47db93881bc34a6155192c2bec0d124731e08ff105672afdb09892e3dc9ccae")
-	if err != nil {
-		panic(err)
-	}
-	signer, err := flowCrypto.NewInMemorySigner(privateKey, flowCrypto.SHA3_256)
-	if err != nil {
-		panic(err)
-	}
-	// set name
-	addr := flowSdk.HexToAddress("0xf8d6e0586b0a20c7")
-	id, err := c.SetName("LemonNeko", addr, addr, addr, 0, 0, 0, signer, signer)
-	if err != nil {
-		panic(err)
-	}
-	time.Sleep(1*time.Second)
-	// get name
-	name, err := c.GetName("0xf8d6e0586b0a20c7")
-	if err != nil {
-		panic(err)
-	}
-	if name != "LemonNeko" {
-		panic(err)
-	}
-	result, err := flowCli.GetTransactionResult(context.Background(), *id)
-	if err != nil {
-		panic(err)
-	}
-	var usernameUpdateEvent contracts.EventUsernameUpdate
-	err = godence.ToGo(result.Events[0].Value, &usernameUpdateEvent)
-	if err != nil {
-		panic(err)
-	}
-	if usernameUpdateEvent.Name != "LemonNeko" {
-		panic(err)
-	}
-	// set avatar
-	_, err = c.SetAvatar("ForTwitter", "https://example.com/avatars/lemonneko", addr, addr, addr, 0, 0, 0, signer, signer)
-	if err != nil {
-		panic(err)
-	}
-	time.Sleep(1*time.Second)
-	// check result
-	// get avatar
-	avatars, err := c.GetAllAvatars("0xf8d6e0586b0a20c7")
-	if err != nil {
-		panic(err)
-	}
-	if avatars["ForTwitter"] != "https://example.com/avatars/lemonneko" {
-		panic(err)
-	}
-	if len(avatars) != 1 {
-		panic(err)
-	}
-	// get avatar names
-	avatarNames, err := c.GetAllAvatarNames("0xf8d6e0586b0a20c7")
-	if err != nil {
-		panic(err)
-	}
-	if avatarNames[0] != "ForTwitter" {
-		panic(err)
-	}
-	if len(avatarNames) != 1 {
-		panic(err)
-	}
-	// get not exists avatar
-	notExists, err := c.GetAvatarByName("0xf8d6e0586b0a20c7", "NotExists")
-	if err != nil {
-		panic(err)
-	}
-	if notExists != "" {
-		panic(err)
-	}
-	// set head pictures
-	_, err = c.SetHeaderPics("url1", "url2", "url3", addr, addr, addr, 0, 0, 0,signer, signer)
-	if err != nil {
-		panic(err)
-	}
-	time.Sleep(1*time.Second)
-	// get head pictures
-	pics, err := c.GetHeaderPics("0xf8d6e0586b0a20c7")
-	if err != nil {
-		panic(err)
-	}
-	if pics.SmallUrl != "url1" || pics.MediumUrl != "url2" || pics.BigUrl != "url3" {
-		panic(err)
-	}
-}
-`)
+	mainContent := strings.NewReader(mainGo)
 	m, err := os.Create(dir + string(filepath.Separator) + "main.go")
 	defer func(m *os.File) {
 		err := m.Close()
@@ -184,33 +68,7 @@ func main() {
 		r.Empty(err)
 	}(fc)
 	r.Empty(err)
-	cfg := strings.NewReader(`{
-	"emulators": {
-		"default": {
-			"port": 3569,
-			"serviceAccount": "emulator-account"
-		}
-	},
-	"contracts": {
-		"UserProfiles": "./UserProfiles.cdc"
-	},
-	"networks": {
-		"emulator": "127.0.0.1:3569",
-		"mainnet": "access.mainnet.nodes.onflow.org:9000",
-		"testnet": "access.devnet.nodes.onflow.org:9000"
-	},
-	"accounts": {
-		"emulator-account": {
-			"address": "f8d6e0586b0a20c7",
-			"key": "c47db93881bc34a6155192c2bec0d124731e08ff105672afdb09892e3dc9ccae"
-		}
-	},
-	"deployments": {
-		"emulator": {
-			"emulator-account": ["UserProfiles"]
-		}
-	}
-}`)
+	cfg := strings.NewReader(flowJson)
 	_, err = io.Copy(fc, cfg)
 	r.Empty(err)
 	// download dependencies
