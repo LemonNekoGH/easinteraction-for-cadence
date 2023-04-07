@@ -4,124 +4,23 @@ import (
 	"bytes"
 	_ "embed"
 	"errors"
-	"github.com/LemonNekoGH/easinteraction-for-cadence/pkg/string_utils"
-	"github.com/LemonNekoGH/easinteraction-for-cadence/pkg/typeconv"
+	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/gen/templates"
+	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/types"
+	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/pkg/string_utils"
+	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/pkg/typeconv"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"go/format"
-	"strings"
-	"text/template"
 )
 
 var (
 	ErrNoTopLevelContract = errors.New("no top level contract found")
 )
 
-var (
-	//go:embed contract_interaction.gohtml
-	templateInteraction string
-	//go:embed query_script.gohtml
-	templateQueryScript string
-	//go:embed tx_script.gohtml
-	templateTxScript string
-)
-
 type Generator struct {
 	pkgName  string
 	contract *ast.CompositeDeclaration
 	output   *bytes.Buffer
-}
-
-type functionParam struct {
-	Label  string
-	Name   string
-	Type   string
-	GoType string
-}
-
-type compositeTypeFunction struct {
-	OwnerTypeName string
-	Name          string
-	GoName        string // first letter uppercase
-	Params        []functionParam
-	ReturnType    string
-	ReturnGoType  string
-}
-
-type contractType struct {
-	PkgName   string
-	Name      string
-	Functions []compositeTypeFunction
-	SubTypes  []CustomType // all nested types will flatten into this field
-}
-
-type compositeTypeField struct {
-	Name   string
-	Type   string
-	GoType string
-}
-
-type CustomType struct {
-	Name       string
-	GoName     string
-	IsResource string
-	Fields     []compositeTypeField
-	Functions  []compositeTypeFunction
-}
-
-func (fn *compositeTypeFunction) IsReturnMap() bool {
-	return strings.HasPrefix(fn.ReturnGoType, "map")
-}
-
-func (fn *compositeTypeFunction) AuthorizerCount() int {
-	var ret int
-	for _, p := range fn.Params {
-		if p.Type == "AuthAccount" {
-			ret++
-		}
-	}
-	return ret
-}
-
-func (fn *compositeTypeFunction) GenCadenceScript() (string, error) {
-	var (
-		t   *template.Template
-		err error
-	)
-	if fn.AuthorizerCount() > 0 {
-		// should generate transaction script
-		t, err = template.New("TxScript").Parse(templateTxScript)
-		if err != nil {
-			return "", err
-		}
-	} else {
-		// should generate query script
-		t, err = template.New("QueryScript").Parse(templateQueryScript)
-		if err != nil {
-			return "", err
-		}
-	}
-	result := bytes.NewBuffer([]byte{})
-	err = t.Execute(result, fn)
-	if err != nil {
-		return "", err
-	}
-	return result.String(), nil
-}
-
-// CommaCountAll returns length of all params - 1, used to check necessary for comma adding.
-func (fn *compositeTypeFunction) CommaCountAll() int {
-	return len(fn.Params) - 1
-}
-
-// CommaCountCommon returns length of all common params - 1, used to check necessary for comma adding.
-func (fn *compositeTypeFunction) CommaCountCommon() int {
-	return len(fn.Params) - fn.AuthorizerCount() - 1
-}
-
-// CommaCountAuth returns length of all auth params - 1, used to check necessary for comma adding.
-func (fn *compositeTypeFunction) CommaCountAuth() int {
-	return fn.AuthorizerCount() - 1
 }
 
 func NewGenerator(pkgName string) *Generator {
@@ -157,56 +56,99 @@ func (g *Generator) Walk(e ast.Element) ast.Walker {
 	return g
 }
 
-// get all functions of contract
-func (g *Generator) collectContractInfos() contractType {
-	contract := contractType{
-		PkgName: g.pkgName,
-		Name:    g.contract.Identifier.String(),
+func collectCompositeType(cd *ast.CompositeDeclaration, ownerType string) types.CompositeType {
+	var (
+		fns                 []types.Function
+		subTypes            []types.CompositeType
+		fields              []types.Field
+		name                = cd.Identifier.String()
+		ownerTypeForSubType string
+	)
+
+	if ownerType != "" {
+		ownerTypeForSubType = ownerType + "." + name
+	} else {
+		ownerTypeForSubType = name
 	}
-	// travel all public functions
-	var fns []compositeTypeFunction
-	for _, m := range g.contract.DeclarationMembers().Declarations() {
-		// skip not function or not public
-		if m.DeclarationKind() != common.DeclarationKindFunction || m.DeclarationAccess() != ast.AccessPublic {
+
+	cdKind := cd.DeclarationKind()
+	for _, m := range cd.DeclarationMembers().Declarations() {
+		// skip not public
+		if m.DeclarationAccess() != ast.AccessPublic && m.DeclarationAccess() != ast.AccessPublicSettable {
 			continue
 		}
-		f := m.(*ast.FunctionDeclaration)
-		fnName := f.Identifier.String()
-		contractFn := compositeTypeFunction{
-			OwnerTypeName: contract.Name,
-			Name:          fnName,
-			GoName:        string_utils.FirstLetterUppercase(fnName),
+		mKind := m.DeclarationKind()
+		switch {
+		// functions
+		case mKind == common.DeclarationKindFunction && cdKind == common.DeclarationKindContract:
+			f := m.(*ast.FunctionDeclaration)
+			contractFn := collectFunctions(f, name)
+			fns = append(fns, contractFn)
+		// struct or resource
+		case mKind == common.DeclarationKindStructure, mKind == common.DeclarationKindResource:
+			d := m.(*ast.CompositeDeclaration)
+			subType := collectCompositeType(d, ownerTypeForSubType)
+			subTypes = append(subTypes, subType)
+		// field
+		case mKind == common.DeclarationKindField:
+			f := m.(*ast.FieldDeclaration)
+			field := collectField(f)
+			fields = append(fields, field)
 		}
-		// get return type
-		retType := f.ReturnTypeAnnotation
-		if retType != nil {
-			contractFn.ReturnType = retType.Type.String()
-			contractFn.ReturnGoType = typeconv.ByName(contractFn.ReturnType)
-		}
-		// travel all params
-		var params []functionParam
-		for _, p := range f.ParameterList.Parameters {
-			params = append(params, functionParam{
-				Name:   p.Identifier.String(),
-				Label:  p.Label,
-				Type:   p.TypeAnnotation.Type.String(),
-				GoType: typeconv.ByName(p.TypeAnnotation.Type.String()),
-			})
-		}
-		contractFn.Params = params
-		fns = append(fns, contractFn)
 	}
-	contract.Functions = fns
-	return contract
+
+	var c types.CompositeType
+	if cd.DeclarationKind() == common.DeclarationKindStructure {
+		c = &types.Struct{}
+	} else if cd.DeclarationKind() == common.DeclarationKindResource {
+		c = &types.Resource{}
+	} else {
+		c = &types.Contract{}
+	}
+	c.SetFields(fields)
+	c.SetFunctions(fns)
+	c.SetSubTypes(subTypes)
+	c.SetName(name)
+	c.SetOwnerType(ownerType)
+	return c
 }
 
-func (g *Generator) gen(contract contractType) error {
-	t, err := template.New("Interaction").Parse(templateInteraction)
-	if err != nil {
-		return err
+func collectField(f *ast.FieldDeclaration) types.Field {
+	return types.Field{
+		Name:   f.Identifier.String(),
+		GoName: string_utils.FirstLetterUppercase(f.Identifier.String()),
+		Type:   f.TypeAnnotation.Type.String(),
 	}
+}
+
+func collectFunctions(f *ast.FunctionDeclaration, ownerTypeName string) types.Function {
+	fnName := f.Identifier.String()
+	fn := types.Function{
+		OwnerTypeName: ownerTypeName,
+		Name:          fnName,
+		GoName:        string_utils.FirstLetterUppercase(fnName),
+	}
+	// get return type
+	retType := f.ReturnTypeAnnotation
+	if retType != nil {
+		fn.ReturnSimpleType = retType.Type.String()
+	}
+	// travel all params
+	var params []types.FunctionParam
+	for _, p := range f.ParameterList.Parameters {
+		params = append(params, types.FunctionParam{
+			Name:  p.Identifier.String(),
+			Label: p.Label,
+			Type:  p.TypeAnnotation.Type.String(),
+		})
+	}
+	fn.Params = params
+	return fn
+}
+
+func (g *Generator) gen(contract *types.Contract) error {
 	// generate go code
-	return t.Execute(g.output, &contract)
+	return templates.TemplateInteraction.Execute(g.output, contract)
 }
 
 func (g *Generator) findTopLevelContract(cdc *ast.Program) {
@@ -220,7 +162,12 @@ func (g *Generator) Gen(cdc *ast.Program) error {
 	if g.contract == nil {
 		return ErrNoTopLevelContract
 	}
-	contract := g.collectContractInfos()
+	top := collectCompositeType(g.contract, "")
+	contract := top.(*types.Contract)
+	contract.PkgName = g.pkgName
+	contract.FlattenSubTypes() // flatten all nested subtypes
+	assignGoTypes(contract)
+
 	// do generate
 	err := g.gen(contract)
 	if err != nil {
@@ -238,4 +185,43 @@ func (g *Generator) Gen(cdc *ast.Program) error {
 // GetOutput returns generated code
 func (g *Generator) GetOutput() *bytes.Buffer {
 	return g.output
+}
+
+// assignGoTypes assigns correct go type for generation
+func assignGoTypes(c *types.Contract) {
+	// fields
+	var newFields []types.Field
+	for _, f := range c.GetFields() {
+		f.GoType, f.Type = typeconv.ByName(f.Type, c.GetSubTypes())
+		newFields = append(newFields, f)
+	}
+	c.SetFields(newFields)
+	// subtypes field
+	var newSubTypes []types.CompositeType
+	for _, s := range c.GetSubTypes() {
+		var newFields2 []types.Field
+		for _, f := range s.GetFields() {
+			f.GoType, f.Type = typeconv.ByName(f.Type, s.GetSubTypes())
+			newFields2 = append(newFields2, f)
+		}
+		s.SetFields(newFields2)
+		newSubTypes = append(newSubTypes, s)
+	}
+	c.SetSubTypes(newSubTypes)
+	// functions
+	var newFns []types.Function
+	for _, f := range c.GetFunctions() {
+		// process function param go type
+		var newPs []types.FunctionParam
+		for _, p := range f.Params {
+			p.GoType, p.Type = typeconv.ByName(p.Type, c.GetSubTypes())
+			newPs = append(newPs, p)
+		}
+		f.Params = newPs
+
+		// process function return go type
+		f.ReturnGoType, f.ReturnType = typeconv.ByName(f.ReturnSimpleType, c.GetSubTypes())
+		newFns = append(newFns, f)
+	}
+	c.SetFunctions(newFns)
 }

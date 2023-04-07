@@ -63,7 +63,7 @@ func initFlowClient() {
 }
 func main() {
 	initFlowClient()
-	c, err := contracts.NewUserProfilesContract("0xf8d6e0586b0a20c7", flowCli)
+	c, err := contracts.NewContractUserProfiles("0xf8d6e0586b0a20c7", flowCli)
 	if err != nil {
 		panic(err)
 	}
@@ -82,7 +82,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	time.Sleep(5*time.Second)
+	time.Sleep(1*time.Second)
 	// get name
 	name, err := c.GetName("0xf8d6e0586b0a20c7")
 	if err != nil {
@@ -96,6 +96,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	time.Sleep(1*time.Second)
 	// get avatar
 	avatars, err := c.GetAllAvatars("0xf8d6e0586b0a20c7")
 	if err != nil {
@@ -126,16 +127,36 @@ func main() {
 	if notExists != "" {
 		panic(err)
 	}
+	// set head pictures
+	_, err = c.SetHeaderPics("url1", "url2", "url3", addr, addr, addr, 0, 0, 0,signer, signer)
+	if err != nil {
+		panic(err)
+	}
+	time.Sleep(1*time.Second)
+	// get head pictures
+	pics, err := c.GetHeaderPics("0xf8d6e0586b0a20c7")
+	if err != nil {
+		panic(err)
+	}
+	if pics.SmallUrl != "url1" || pics.MediumUrl != "url2" || pics.BigUrl != "url3" {
+		panic(err)
+	}
 }
 `)
 	m, err := os.Create(dir + string(filepath.Separator) + "main.go")
-	defer m.Close()
+	defer func(m *os.File) {
+		err := m.Close()
+		r.Empty(err)
+	}(m)
 	r.Empty(err)
 	_, err = io.Copy(m, mainContent)
 	r.Empty(err)
 	// write contract file
 	c, err := os.Create(dir + string(filepath.Separator) + "UserProfiles.cdc")
-	defer c.Close()
+	defer func(c *os.File) {
+		err := c.Close()
+		r.Empty(err)
+	}(c)
 	r.Empty(err)
 	_, err = io.Copy(c, bytes.NewBuffer(userProfilesCdc))
 	r.Empty(err)
@@ -144,7 +165,10 @@ func main() {
 	r.Empty(err)
 	// write flow config
 	fc, err := os.Create(dir + string(filepath.Separator) + "flow.json")
-	defer fc.Close()
+	defer func(fc *os.File) {
+		err := fc.Close()
+		r.Empty(err)
+	}(fc)
 	r.Empty(err)
 	cfg := strings.NewReader(`{
 	"emulators": {
