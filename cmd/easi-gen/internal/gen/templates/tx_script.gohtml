@@ -1,0 +1,7 @@
+{{- /*gotype: github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/gen.contractFunction*/ -}}
+import {{.OwnerTypeName}} from %s{{$commaCountAll:=.CommaCountAll}}{{$commaCountAuth:=.CommaCountAuth}}{{$commaCountCommon:=.CommaCountCommon}}{{$usedCommaCommon := 0}}{{$usedCommaAuth := 0}}{{$fn := .}}
+transaction({{range $i, $p := .Params}}{{if ne $p.Type "AuthAccount"}}arg{{$i}}: {{$p.Type}}{{if lt $usedCommaCommon $commaCountCommon}},{{$usedCommaCommon = $fn.AddUsedCommaCommon}}{{end}}{{end}}{{end}}) {
+    prepare({{range $i, $p := .Params}}{{if eq $p.Type "AuthAccount"}}arg{{$i}}: {{$p.Type}}{{if lt $usedCommaAuth $commaCountAuth}},{{$usedCommaCommon = $fn.AddUsedCommaAuth}}{{end}}{{end}}{{end}}) {
+        {{.OwnerTypeName}}.{{.Name}}({{range $i, $p := .Params}}{{if ne $p.Label "_"}}{{$p.Label}}:{{end}}arg{{$i}}{{if lt $i $commaCountAll}},{{end}}{{end}})
+    }
+}

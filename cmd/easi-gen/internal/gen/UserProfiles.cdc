@@ -1,6 +1,19 @@
 pub contract UserProfiles {
-    access(self) let usernames: {Address:String}
-    access(self) let avatars: {Address:{String:String}}
+    pub struct HeaderPictures {
+        pub(set) var smallUrl: String
+        pub(set) var mediumUrl: String
+        pub(set) var bigUrl: String
+
+        init() {
+            self.smallUrl = ""
+            self.mediumUrl = ""
+            self.bigUrl = ""
+        }
+    }
+
+    priv let usernames: {Address:String}
+    priv let avatars: {Address:{String:String}}
+    priv let headerPics: {Address: HeaderPictures}
 
     pub fun setName(user acc: AuthAccount, to name: String) {
         self.usernames[acc.address] = name
@@ -28,8 +41,21 @@ pub contract UserProfiles {
         return self.getAllAvatars(addr)[name]
     }
 
+    pub fun getHeaderPics(_ addr: Address): HeaderPictures? {
+        return self.headerPics[addr]
+    }
+
+    pub fun setHeaderPics(_ acc: AuthAccount, _ smallUrl: String, _ mediumUrl: String, _ bigUrl: String) {
+        let headerPics = self.getHeaderPics(acc.address) ?? HeaderPictures()
+        headerPics.bigUrl = bigUrl
+        headerPics.mediumUrl = mediumUrl
+        headerPics.smallUrl = smallUrl
+        self.headerPics[acc.address] = headerPics;
+    }
+
     init() {
         self.usernames = {}
         self.avatars = {}
+        self.headerPics = {}
     }
 }

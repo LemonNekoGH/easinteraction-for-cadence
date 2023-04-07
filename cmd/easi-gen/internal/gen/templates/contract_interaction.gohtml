@@ -1,4 +1,4 @@
-{{- /*gotype: github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/gen.contractType*/ -}}
+{{- /*gotype: github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/types.CompositeType*/ -}}
 package {{.PkgName}}
 
 import (
@@ -11,35 +11,49 @@ import (
 	"github.com/lemonnekogh/godence"
 )
 
-type Contract{{.Name}} struct {
+{{define "CompositeType"}}
+type {{.GetGoName}} struct {
+	{{if and (not .IsResource) (not .IsStruct)}}
 	address string
 	flowCli *flowGrpc.Client
+	{{else}}
+	{{range .GetFields}}
+	{{.GoName}} {{.GoType}} `godence:"{{.Name}}"`
+	{{end}}
+	{{end}}
 }
 
-// New{{.Name}}Contract construct a new Contract{{.Name}} instance.
-func New{{.Name}}Contract(address string, flowCli *flowGrpc.Client) (*Contract{{.Name}}, error) {
+{{- /* Only for contracts */ -}}
+{{if and (not .IsResource) (not .IsStruct)}}
+// New{{.GetGoName}} construct a new {{.GetGoName}} instance.
+func New{{.GetGoName}}(address string, flowCli *flowGrpc.Client) (*{{.GetGoName}}, error) {
 	// prepare script
-	script := fmt.Sprintf(`import {{.Name}} from %s
-pub fun main(){}
+	script := fmt.Sprintf(`import {{.GetName}} from %s
+pub fun main(){{ if or .IsResource .IsStruct }}: String{
+	// check if type exists
+	return Type<{{if eq .IsResource true}}{{end}}{{.GetName}}>().identifier
+}{{else}}{}{{end}}
 `, address)
 	// send a script to ensure contract address is correct
 	_, err := flowCli.ExecuteScriptAtLatestBlock(context.Background(), []byte(script), nil)
 	if err != nil {
 		return nil, err
 	}
-	return &Contract{{.Name}}{
+	return &{{.GetGoName}}{
 		address: address,
 		flowCli: flowCli,
 	}, nil
 }
+{{end}}
 
-{{$contractName := $.Name}}
-{{range $fn := .Functions}}
+{{$typeName := .GetGoName}}
+{{$fns := .GetFunctions}}
+{{range $fn := $fns}}
 {{$commaCountAll:=.CommaCountAll}}{{$commaCountAuth:=.CommaCountAuth}}{{$commaCountCommon:=.CommaCountCommon}}
 {{$needSendTx := gt .AuthorizerCount 0}}
 // {{$fn.GoName}} will {{if $needSendTx}}change Flow blockchain's state.{{else}}query from Flow blockchain.{{end}}
 // Signature: pub fun {{$fn.Name}}({{range $i, $p := $fn.Params}}{{$p.Label}} {{$p.Name}}: {{$p.Type}}{{if lt $i $commaCountAll}},{{end}}{{end}}){{if ne $fn.ReturnGoType ""}}: {{$fn.ReturnType}}{{end}}
-func (c *Contract{{$contractName}}) {{$fn.GoName}}(
+func (c *{{$typeName}}) {{$fn.GoName}}(
 	{{range $i, $p := $fn.Params}}{{if ne $p.Type "AuthAccount"}}arg{{$i}} {{$p.GoType}},{{end}}{{end}}
 	{{if $needSendTx}}{{range $i, $p := $fn.Params}}{{if eq $p.Type "AuthAccount"}}authorizer{{$i}},{{end}}{{end}} payer, proposer flowSdk.Address,
 	{{range $i, $p := $fn.Params}}{{if eq $p.Type "AuthAccount"}}authorizer{{$i}}KeyIndex,{{end}}{{end}} payerKeyIndex, proposalKeyIndex int,
@@ -139,4 +153,13 @@ func (c *Contract{{$contractName}}) {{$fn.GoName}}(
 	{{end}}
 {{end}}
 }
+{{end}}
+{{end}}
+
+{{- /* Contract */ -}}
+{{template "CompositeType" .}}
+
+{{- /* Sub types */ -}}
+{{range .GetSubTypes}}
+{{template "CompositeType" .}}
 {{end}}

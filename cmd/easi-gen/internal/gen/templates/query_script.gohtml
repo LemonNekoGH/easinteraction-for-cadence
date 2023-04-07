@@ -1,0 +1,5 @@
+{{- /*gotype: github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/types.Function*/ -}}
+import {{.OwnerTypeName}} from %s{{$commaCount := .CommaCountAll}}
+pub fun main({{range $i, $p := .Params}}arg{{$i}}: {{$p.Type}}{{if lt $i $commaCount}},{{end}}{{end}}){{if ne .ReturnType ""}}: {{.ReturnType}}{{end}}{
+    return {{.OwnerTypeName}}.{{.Name}}({{range $i, $p := .Params}}arg{{$i}}{{if lt $i $commaCount}},{{end}}{{end}})
+}

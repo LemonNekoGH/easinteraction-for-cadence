@@ -2,14 +2,34 @@ package gen
 
 import (
 	_ "embed"
+	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/types"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func Test_contractFunction_commaCountAll(t *testing.T) {
-	c := contractFunction{}
+	c := types.Function{}
 	assert.Equal(t, -1, c.CommaCountAll())
+}
+
+func Test_contractFunction_commaCountCommon(t *testing.T) {
+	c := types.Function{
+		Params: []types.FunctionParam{{
+			Type: "AuthAccount",
+		}},
+	}
+	assert.Equal(t, -1, c.CommaCountCommon())
+}
+
+func Test_contractFunction_commaCountAuth(t *testing.T) {
+	c := types.Function{
+		Params: []types.FunctionParam{{
+			Type: "AuthAccount",
+		}},
+	}
+	assert.Equal(t, 0, c.CommaCountAuth())
 }
 
 func Test_contractFunction_genCadenceScript(t *testing.T) {
@@ -17,11 +37,11 @@ func Test_contractFunction_genCadenceScript(t *testing.T) {
 		a := assert.New(t)
 		r := require.New(t)
 
-		fn := contractFunction{
-			ContractName: "AContract",
-			Name:         "setSomething",
-			GoName:       "SetSomething",
-			Params: []functionParam{
+		fn := types.Function{
+			OwnerTypeName: "AContract",
+			Name:          "setSomething",
+			GoName:        "SetSomething",
+			Params: []types.FunctionParam{
 				{
 					Label:  "firstArg",
 					Name:   "arg0",
@@ -52,11 +72,11 @@ transaction(arg1: UInt8) {
 		a := assert.New(t)
 		r := require.New(t)
 
-		fn := contractFunction{
-			ContractName: "AContract",
-			Name:         "setSomething",
-			GoName:       "SetSomething",
-			Params: []functionParam{
+		fn := types.Function{
+			OwnerTypeName: "AContract",
+			Name:          "setSomething",
+			GoName:        "SetSomething",
+			Params: []types.FunctionParam{
 				{
 					Label:  "firstArg",
 					Name:   "arg",
