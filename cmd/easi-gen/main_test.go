@@ -41,7 +41,7 @@ func Test_runCommand(t *testing.T) {
 	}()
 	// write sources
 	mainContent := strings.NewReader(mainGo)
-	m, err := os.Create(dir + string(filepath.Separator) + "main.go")
+	m, err := os.Create(filepath.Join(dir, "main.go"))
 	defer func(m *os.File) {
 		err := m.Close()
 		r.Empty(err)
@@ -50,7 +50,7 @@ func Test_runCommand(t *testing.T) {
 	_, err = io.Copy(m, mainContent)
 	r.Empty(err)
 	// write contract file
-	c, err := os.Create(dir + string(filepath.Separator) + "UserProfiles.cdc")
+	c, err := os.Create(filepath.Join(dir, "UserProfiles.cdc"))
 	defer func(c *os.File) {
 		err := c.Close()
 		r.Empty(err)
@@ -59,10 +59,10 @@ func Test_runCommand(t *testing.T) {
 	_, err = io.Copy(c, bytes.NewBuffer(userProfilesCdc))
 	r.Empty(err)
 	// do generate
-	err = runCommand0(c.Name(), dir+string(filepath.Separator)+"contracts"+string(filepath.Separator)+"user_profiles.go", "contracts")
+	err = runCommand0(c.Name(), filepath.Join(dir, "contracts", "user_profiles.go"), "contracts")
 	r.Empty(err)
 	// write flow config
-	fc, err := os.Create(dir + string(filepath.Separator) + "flow.json")
+	fc, err := os.Create(filepath.Join(dir, "flow.json"))
 	defer func(fc *os.File) {
 		err := fc.Close()
 		r.Empty(err)

@@ -75,7 +75,6 @@ func collectCompositeType(cd *ast.CompositeDeclaration, ownerType string) types.
 	cdKind := cd.DeclarationKind()
 	for _, m := range cd.DeclarationMembers().Declarations() {
 		// skip not public
-		fmt.Printf("name: %s, type: %s, access: %s\n", m.DeclarationIdentifier(), m.DeclarationKind().Name(), m.DeclarationAccess().Keyword())
 		if m.DeclarationAccess() != ast.AccessPublic &&
 			m.DeclarationAccess() != ast.AccessPublicSettable &&
 			// event initializer has no name and no access keyword
