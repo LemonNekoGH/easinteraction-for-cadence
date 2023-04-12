@@ -183,7 +183,7 @@ func runCommand0(source, output, pkgName string) error {
 	}
 
 	// do process
-	err = doProcess(sourceReader, outputWriter, pkgName)
+	err = doProcess(sourceBuffer, outputWriter, pkgName) // sourceReader is EOF, use sourceBuffer instead, or use io.TeeReader. https://stackoverflow.com/questions/39791021/how-to-read-multiple-times-from-same-io-reader
 	if err != nil {
 		fmt.Println("process failed, skipped: " + source)
 		fmt.Println("	error: " + err.Error())
