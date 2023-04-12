@@ -2,8 +2,10 @@ package types
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/gen/templates"
 	"github.com/onflow/cadence/runtime/common"
+	"path/filepath"
 	"strings"
 	"text/template"
 )
@@ -231,4 +233,26 @@ func (fn *Function) AddUsedCommaCommon() int {
 func (fn *Function) AddUsedCommaAuth() int {
 	fn.usedCommaAuth += 1
 	return fn.usedCommaAuth
+}
+
+type FlowJson struct {
+	Contracts map[string]string `json:"contracts"`
+}
+
+// ResolvePath resolve contracts file path, and concat contract output path
+func (f *FlowJson) ResolvePath(flowJsonPath, pkgName, outputDir string) ([]string, []string) {
+	flowJsonDir := filepath.Dir(flowJsonPath)
+	if outputDir == "" {
+		outputDir = filepath.Join(flowJsonDir, pkgName)
+		fmt.Println("auto set output path: " + outputDir)
+	}
+	var (
+		sourcePaths []string
+		outputPaths []string
+	)
+	for name, path := range f.Contracts {
+		sourcePaths = append(sourcePaths, filepath.Join(flowJsonDir, path))
+		outputPaths = append(outputPaths, filepath.Join(outputDir, strings.ToLower(name)+".go")) // use lower case contract name for file name
+	}
+	return sourcePaths, outputPaths
 }

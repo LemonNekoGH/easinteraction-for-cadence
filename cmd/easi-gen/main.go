@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/gen"
+	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/types"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/spf13/cobra"
 	"io"
@@ -51,18 +53,64 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	}
 }
 
+func getOutputWriter(output string) (io.WriteCloser, error) {
+	var outputWriter io.WriteCloser
+	// fallback to stdout
+	if output == "" {
+		outputWriter = os.Stdout
+		return outputWriter, nil
+	}
+	// check source exists
+	if of, err := os.Stat(output); err != nil {
+		// check parent dir exists
+		outDir := filepath.Dir(output)
+		if baseInfo, err2 := os.Stat(outDir); err2 != nil {
+			// create
+			err2 = os.MkdirAll(outDir, 0755)
+			if err2 != nil {
+				return nil, err2
+			}
+			outputWriter, err2 = os.Create(output)
+			if err2 != nil {
+				return nil, err2
+			}
+		} else if !baseInfo.IsDir() {
+			return nil, errors.New("the parent path of the output should be a directory, not a file")
+		}
+	} else if of.IsDir() {
+		return nil, errors.New("the path of the output should be a file, not a directory")
+	} else {
+		var err2 error
+		// open file as r/w mode
+		outputWriter, err2 = os.OpenFile(output, os.O_RDWR, 0755)
+		if err2 != nil {
+			return nil, err2
+		}
+	}
+
+	return outputWriter, nil
+}
+
+func getSourceReader(source string) (io.ReadCloser, error) {
+	// check source exists
+	if _, err := os.Stat(source); err != nil {
+		return nil, err
+	}
+	sourceReader, err := os.Open(source)
+	if err != nil {
+		return nil, err
+	}
+	return sourceReader, nil
+}
+
 func runCommand0(source, output, pkgName string) error {
 	var sourceReader io.ReadCloser
 	// fallback to stdin
 	if source == "" {
 		sourceReader = os.Stdin
 	} else {
-		// check source exists
-		if _, err := os.Stat(source); err != nil {
-			return err
-		}
 		var err error
-		sourceReader, err = os.Open(source)
+		sourceReader, err = getSourceReader(source)
 		if err != nil {
 			return err
 		}
@@ -71,43 +119,61 @@ func runCommand0(source, output, pkgName string) error {
 		return errors.New("get source reader error")
 	}
 	defer sourceReader.Close()
-	var outputWriter io.WriteCloser
-	// fallback to stdout
-	if output == "" {
-		outputWriter = os.Stdout
-	} else {
-		// check source exists
-		if of, err := os.Stat(output); err != nil {
-			// check parent dir exists
-			outDir := filepath.Dir(output)
-			if baseInfo, err2 := os.Stat(outDir); err2 != nil {
-				// create
-				err2 = os.MkdirAll(outDir, 0755)
-				if err2 != nil {
-					return err2
-				}
-				outputWriter, err2 = os.Create(output)
-				if err2 != nil {
-					return err2
-				}
-			} else if !baseInfo.IsDir() {
-				return errors.New("the parent path of the output should be a directory, not a file")
-			}
-		} else if of.IsDir() {
-			return errors.New("the path of the output should be a file, not a directory")
-		} else {
-			var err2 error
-			// open file as r/w mode
-			outputWriter, err2 = os.OpenFile(output, os.O_RDWR, 0755)
-			if err2 != nil {
-				return err2
-			}
+	// check stdin is flow.json
+	sourceBuffer := bytes.NewBuffer([]byte{})
+	_, err := io.Copy(sourceBuffer, sourceReader)
+	if err != nil {
+		return err
+	}
+
+	var (
+		flowJson types.FlowJson
+	)
+	err = json.Unmarshal(sourceBuffer.Bytes(), &flowJson)
+	if err == nil {
+		if source == "" {
+			return errors.New("flow.json cannot read from stdin")
 		}
+
+		sourcesPath, outputsPath := flowJson.ResolvePath(source, pkgName, output)
+		// get reader and writers
+		for i, s := range sourcesPath {
+			inputReader, err2 := getSourceReader(s)
+			if err2 != nil {
+				fmt.Println("get source reader failed, skipped: " + s)
+				fmt.Println("	error: " + err2.Error())
+				continue
+			}
+
+			o := outputsPath[i]
+			outWriter, err2 := getOutputWriter(o)
+			if err2 != nil {
+				fmt.Println("get output writer failed, skipped: " + s)
+				fmt.Println("	error: " + err2.Error())
+				continue
+			}
+
+			err2 = doProcess(inputReader, outWriter, pkgName)
+			if err2 != nil {
+				fmt.Println("process failed, skipped: " + s)
+				fmt.Println("	error: " + err2.Error())
+			}
+
+			inputReader.Close()
+			outWriter.Close()
+		}
+		return nil
 	}
-	if outputWriter == nil {
-		return errors.New("get output reader error")
-	}
+	// not flow json file
+	outputWriter, err2 := getOutputWriter(output)
 	defer outputWriter.Close()
+	if err2 != nil {
+		return err2
+	}
+
+	if outputWriter == nil {
+		return errors.New("get output writer error")
+	}
 
 	// do process
 	return doProcess(sourceReader, outputWriter, pkgName)
