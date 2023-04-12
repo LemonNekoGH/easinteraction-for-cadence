@@ -235,8 +235,19 @@ func (fn *Function) AddUsedCommaAuth() int {
 	return fn.usedCommaAuth
 }
 
+// getContractPath there are two variants of contracts object
+func getContractPath(d any) string {
+	switch v := d.(type) {
+	case string:
+		return v
+	case map[string]any:
+		return v["source"].(string)
+	}
+	return ""
+}
+
 type FlowJson struct {
-	Contracts map[string]string `json:"contracts"`
+	Contracts map[string]any `json:"contracts"`
 }
 
 // ResolvePath resolve contracts file path, and concat contract output path
@@ -251,7 +262,8 @@ func (f *FlowJson) ResolvePath(flowJsonPath, pkgName, outputDir string) ([]strin
 		outputPaths []string
 	)
 	for name, path := range f.Contracts {
-		sourcePaths = append(sourcePaths, filepath.Join(flowJsonDir, path))
+		p := getContractPath(path)
+		sourcePaths = append(sourcePaths, filepath.Join(flowJsonDir, p))
 		outputPaths = append(outputPaths, filepath.Join(outputDir, strings.ToLower(name)+".go")) // use lower case contract name for file name
 	}
 	return sourcePaths, outputPaths

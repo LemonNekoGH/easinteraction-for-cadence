@@ -70,24 +70,23 @@ func getOutputWriter(output string) (io.WriteCloser, error) {
 			if err2 != nil {
 				return nil, err2
 			}
-			outputWriter, err2 = os.Create(output)
-			if err2 != nil {
-				return nil, err2
-			}
 		} else if !baseInfo.IsDir() {
 			return nil, errors.New("the parent path of the output should be a directory, not a file")
 		}
-	} else if of.IsDir() {
-		return nil, errors.New("the path of the output should be a file, not a directory")
-	} else {
 		var err2 error
-		// open file as r/w mode
-		outputWriter, err2 = os.OpenFile(output, os.O_RDWR, 0755)
+		outputWriter, err2 = os.Create(output)
 		if err2 != nil {
 			return nil, err2
 		}
+		return outputWriter, nil
+	} else if of.IsDir() {
+		return nil, errors.New("the path of the output should be a file, not a directory")
 	}
-
+	// open file as r/w mode
+	outputWriter, err := os.OpenFile(output, os.O_RDWR, 0755)
+	if err != nil {
+		return nil, err
+	}
 	return outputWriter, nil
 }
 
@@ -148,8 +147,13 @@ func runCommand0(source, output, pkgName string) error {
 			o := outputsPath[i]
 			outWriter, err2 := getOutputWriter(o)
 			if err2 != nil {
-				fmt.Println("get output writer failed, skipped: " + s)
+				fmt.Println("get output writer failed, skipped: " + o)
 				fmt.Println("	error: " + err2.Error())
+				continue
+			}
+
+			if outWriter == nil {
+				fmt.Println("get output writer failed, skipped: " + o)
 				continue
 			}
 
@@ -163,6 +167,9 @@ func runCommand0(source, output, pkgName string) error {
 			outWriter.Close()
 		}
 		return nil
+	} else {
+		fmt.Println("json unmarshal failed, this is not a flow.json: " + source)
+		fmt.Println("	error: " + err.Error())
 	}
 	// not flow json file
 	outputWriter, err2 := getOutputWriter(output)
@@ -176,7 +183,12 @@ func runCommand0(source, output, pkgName string) error {
 	}
 
 	// do process
-	return doProcess(sourceReader, outputWriter, pkgName)
+	err = doProcess(sourceReader, outputWriter, pkgName)
+	if err != nil {
+		fmt.Println("process failed, skipped: " + source)
+		fmt.Println("	error: " + err.Error())
+	}
+	return err
 }
 
 func main() {
