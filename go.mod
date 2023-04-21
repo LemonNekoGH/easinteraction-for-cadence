@@ -3,7 +3,7 @@ module github.com/LemonNekoGH/easinteraction-for-cadence
 go 1.19
 
 require (
-	github.com/onflow/cadence v0.36.0
+	github.com/onflow/cadence v0.38.1
 	github.com/samber/lo v1.38.1
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.1
