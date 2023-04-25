@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/analysis"
 	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/gen/templates"
 	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/types"
 	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/pkg/string_utils"
@@ -57,7 +58,7 @@ func (g *Generator) Walk(e ast.Element) ast.Walker {
 	return g
 }
 
-func collectCompositeType(cd *ast.CompositeDeclaration, ownerType string) types.CompositeType {
+func collectCompositeType(cd *ast.CompositeDeclaration, ownerType, contract string) types.CompositeType {
 	var (
 		fns                 []types.Function
 		subTypes            []types.CompositeType
@@ -86,12 +87,12 @@ func collectCompositeType(cd *ast.CompositeDeclaration, ownerType string) types.
 		// functions
 		case mKind == common.DeclarationKindFunction && cdKind == common.DeclarationKindContract:
 			f := m.(*ast.FunctionDeclaration)
-			contractFn := collectFunctions(f, name)
+			contractFn := collectFunctions(f, name, contract)
 			fns = append(fns, contractFn)
 		// struct, resource, event
 		case mKind == common.DeclarationKindStructure, mKind == common.DeclarationKindResource, mKind == common.DeclarationKindEvent:
 			d := m.(*ast.CompositeDeclaration)
-			subType := collectCompositeType(d, ownerTypeForSubType)
+			subType := collectCompositeType(d, ownerTypeForSubType, contract)
 			subTypes = append(subTypes, subType)
 		// field
 		case mKind == common.DeclarationKindField:
@@ -148,7 +149,7 @@ func collectField(f *ast.FieldDeclaration) types.Field {
 	}
 }
 
-func collectFunctions(f *ast.FunctionDeclaration, ownerTypeName string) types.Function {
+func collectFunctions(f *ast.FunctionDeclaration, ownerTypeName, contract string) types.Function {
 	fnName := f.Identifier.String()
 	fn := types.Function{
 		OwnerTypeName: ownerTypeName,
@@ -157,6 +158,7 @@ func collectFunctions(f *ast.FunctionDeclaration, ownerTypeName string) types.Fu
 	}
 	// get return type
 	retType := f.ReturnTypeAnnotation
+	// TODO: if return resource, should not generate transaction script
 	if retType != nil {
 		fn.ReturnSimpleType = retType.Type.String()
 	}
@@ -170,6 +172,15 @@ func collectFunctions(f *ast.FunctionDeclaration, ownerTypeName string) types.Fu
 		})
 	}
 	fn.Params = params
+	// check if it will change blockchain state
+	anal := analysis.NewFunctionBlockAnalysis(fnName, ownerTypeName, contract, f.FunctionBlock.Block)
+	analResult := anal.Analyze()
+	fn.WillChangeState = analResult.WillChangeState
+	if fn.WillChangeState {
+		fmt.Println("will change state: " + fnName)
+	} else {
+		fmt.Println("will not change state: " + fnName)
+	}
 	return fn
 }
 
@@ -189,7 +200,7 @@ func (g *Generator) Gen(cdc *ast.Program) error {
 	if g.contract == nil {
 		return ErrNoTopLevelContract
 	}
-	top := collectCompositeType(g.contract, "")
+	top := collectCompositeType(g.contract, "", g.contract.Identifier.String())
 	contract := top.(*types.Contract)
 	contract.PkgName = g.pkgName
 	contract.FlattenSubTypes() // flatten all nested subtypes

@@ -167,11 +167,13 @@ type Function struct {
 	Name             string
 	GoName           string // first letter uppercase
 	Params           []FunctionParam
-	ReturnType       string // for return type of script
-	ReturnSimpleType string // for convert to go type
-	ReturnGoType     string
-	usedCommaCommon  int // use index to check is need to add comma is bad, because AuthAccount generate will skip but index will plus one
-	usedCommaAuth    int // use index to check is need to add comma is bad, because not AuthAccount generate will skip but index will plus one
+	ReturnType       string // for return type of script, from the contract, example: "Example.AStruct"
+	ReturnSimpleType string // for convert to go type, from the contract, example: "AStruct"
+	ReturnGoType     string // for return type of generated go function, example: "*AStruct"
+	usedCommaCommon  int    // use index to check is need to add comma is bad, because AuthAccount generate will skip but index will plus one
+	usedCommaAuth    int    // use index to check is need to add comma is bad, because not AuthAccount generate will skip but index will plus one
+	WillChangeState  bool   // for check is need to generate transaction script
+	IsReturnResource bool   // for check is cannot generate transaction script
 }
 
 func (fn *Function) IsReturnMap() bool {

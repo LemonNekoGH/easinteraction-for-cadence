@@ -35,7 +35,7 @@ func doProcess(source io.Reader, output io.Writer, pkgName string) error {
 		return err
 	}
 	// output to writer
-	_, err = io.Copy(output, g.GetOutput())
+	//_, err = io.Copy(output, g.GetOutput())
 	if err != nil {
 		return err
 	}

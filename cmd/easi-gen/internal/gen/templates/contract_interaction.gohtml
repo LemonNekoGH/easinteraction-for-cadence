@@ -50,7 +50,7 @@ pub fun main(){{ if ne .Kind 3 }}: String{
 {{$fns := .GetFunctions}}
 {{range $fn := $fns}}
 {{$commaCountAll:=.CommaCountAll}}{{$commaCountAuth:=.CommaCountAuth}}{{$commaCountCommon:=.CommaCountCommon}}
-{{$needSendTx := gt .AuthorizerCount 0}}
+{{$needSendTx := $fn.WillChangeState}}
 // {{$fn.GoName}} will {{if $needSendTx}}change Flow blockchain's state.{{else}}query from Flow blockchain.{{end}}
 // Signature: pub fun {{$fn.Name}}({{range $i, $p := $fn.Params}}{{$p.Label}} {{$p.Name}}: {{$p.Type}}{{if lt $i $commaCountAll}},{{end}}{{end}}){{if ne $fn.ReturnGoType ""}}: {{$fn.ReturnType}}{{end}}
 func (c *{{$typeName}}) {{$fn.GoName}}(
