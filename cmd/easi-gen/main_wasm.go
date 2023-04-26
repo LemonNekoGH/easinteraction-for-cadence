@@ -21,4 +21,5 @@ func doProcessForWasm(_ js.Value, args []js.Value) any {
 
 func main() {
 	js.Global().Set("doProcessForWasm", js.FuncOf(doProcessForWasm))
+	select {}
 }
