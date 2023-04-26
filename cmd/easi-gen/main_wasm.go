@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/cmd_shared"
 	"syscall/js"
 )
 
@@ -11,7 +12,7 @@ func doProcessForWasm(_ js.Value, args []js.Value) any {
 
 	output := bytes.NewBufferString("")
 	input := bytes.NewBufferString(source)
-	err := doProcess(input, output, "example")
+	err := cmd_shared.DoProcess(input, output, "example")
 	if err != nil {
 		return js.ValueOf("Error: " + err.Error())
 	}
