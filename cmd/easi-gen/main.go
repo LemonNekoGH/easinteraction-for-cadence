@@ -5,42 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/gen"
+	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/cmd_shared"
 	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/types"
-	"github.com/onflow/cadence/runtime/parser"
 	"github.com/spf13/cobra"
 	"io"
 	"os"
-	"path/filepath"
 )
 
 // Version 用于注入版本号
 var Version = "0.0.1"
-
-func doProcess(source io.Reader, output io.Writer, pkgName string) error {
-	// read cadence content
-	sInput := bytes.NewBuffer([]byte{})
-	_, err := io.Copy(sInput, source)
-	if err != nil {
-		return err
-	}
-	// parse cadence content
-	cdc, err := parser.ParseProgram(nil, sInput.Bytes(), parser.Config{})
-	if err != nil {
-		return err
-	}
-	// gen golang code
-	g := gen.NewGenerator(pkgName)
-	if err = g.Gen(cdc); err != nil {
-		return err
-	}
-	// output to writer
-	_, err = io.Copy(output, g.GetOutput())
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
 func runCommand(cmd *cobra.Command, _ []string) {
 	source, _ := cmd.Flags().GetString("source")
@@ -53,55 +26,6 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	}
 }
 
-func getOutputWriter(output string) (io.WriteCloser, error) {
-	var outputWriter io.WriteCloser
-	// fallback to stdout
-	if output == "" {
-		outputWriter = os.Stdout
-		return outputWriter, nil
-	}
-	// check source exists
-	if of, err := os.Stat(output); err != nil {
-		// check parent dir exists
-		outDir := filepath.Dir(output)
-		if baseInfo, err2 := os.Stat(outDir); err2 != nil {
-			// create
-			err2 = os.MkdirAll(outDir, 0755)
-			if err2 != nil {
-				return nil, err2
-			}
-		} else if !baseInfo.IsDir() {
-			return nil, errors.New("the parent path of the output should be a directory, not a file")
-		}
-		var err2 error
-		outputWriter, err2 = os.Create(output)
-		if err2 != nil {
-			return nil, err2
-		}
-		return outputWriter, nil
-	} else if of.IsDir() {
-		return nil, errors.New("the path of the output should be a file, not a directory")
-	}
-	// open file as r/w mode
-	outputWriter, err := os.OpenFile(output, os.O_RDWR, 0755)
-	if err != nil {
-		return nil, err
-	}
-	return outputWriter, nil
-}
-
-func getSourceReader(source string) (io.ReadCloser, error) {
-	// check source exists
-	if _, err := os.Stat(source); err != nil {
-		return nil, err
-	}
-	sourceReader, err := os.Open(source)
-	if err != nil {
-		return nil, err
-	}
-	return sourceReader, nil
-}
-
 func runCommand0(source, output, pkgName string) error {
 	var sourceReader io.ReadCloser
 	// fallback to stdin
@@ -109,7 +33,7 @@ func runCommand0(source, output, pkgName string) error {
 		sourceReader = os.Stdin
 	} else {
 		var err error
-		sourceReader, err = getSourceReader(source)
+		sourceReader, err = cmd_shared.GetSourceReader(source)
 		if err != nil {
 			return err
 		}
@@ -137,7 +61,7 @@ func runCommand0(source, output, pkgName string) error {
 		sourcesPath, outputsPath := flowJson.ResolvePath(source, pkgName, output)
 		// get reader and writers
 		for i, s := range sourcesPath {
-			inputReader, err2 := getSourceReader(s)
+			inputReader, err2 := cmd_shared.GetSourceReader(s)
 			if err2 != nil {
 				fmt.Println("get source reader failed, skipped: " + s)
 				fmt.Println("	error: " + err2.Error())
@@ -145,7 +69,7 @@ func runCommand0(source, output, pkgName string) error {
 			}
 
 			o := outputsPath[i]
-			outWriter, err2 := getOutputWriter(o)
+			outWriter, err2 := cmd_shared.GetOutputWriter(o)
 			if err2 != nil {
 				fmt.Println("get output writer failed, skipped: " + o)
 				fmt.Println("	error: " + err2.Error())
@@ -157,7 +81,7 @@ func runCommand0(source, output, pkgName string) error {
 				continue
 			}
 
-			err2 = doProcess(inputReader, outWriter, pkgName)
+			err2 = cmd_shared.DoProcess(inputReader, outWriter, pkgName)
 			if err2 != nil {
 				fmt.Println("process failed, skipped: " + s)
 				fmt.Println("	error: " + err2.Error())
@@ -172,7 +96,7 @@ func runCommand0(source, output, pkgName string) error {
 		fmt.Println("	error: " + err.Error())
 	}
 	// not flow json file
-	outputWriter, err2 := getOutputWriter(output)
+	outputWriter, err2 := cmd_shared.GetOutputWriter(output)
 	defer outputWriter.Close()
 	if err2 != nil {
 		return err2
@@ -183,7 +107,7 @@ func runCommand0(source, output, pkgName string) error {
 	}
 
 	// do process
-	err = doProcess(sourceBuffer, outputWriter, pkgName) // sourceReader is EOF, use sourceBuffer instead, or use io.TeeReader. https://stackoverflow.com/questions/39791021/how-to-read-multiple-times-from-same-io-reader
+	err = cmd_shared.DoProcess(sourceBuffer, outputWriter, pkgName) // sourceReader is EOF, use sourceBuffer instead, or use io.TeeReader. https://stackoverflow.com/questions/39791021/how-to-read-multiple-times-from-same-io-reader
 	if err != nil {
 		fmt.Println("process failed, skipped: " + source)
 		fmt.Println("	error: " + err.Error())
