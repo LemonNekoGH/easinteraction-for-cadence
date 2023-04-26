@@ -23,8 +23,9 @@ globalThis.crypto = {
 };
 
 export const newEasiGen = async () => {
-    // @ts-ignore
-    await import('./wasm_exec.mjs')
+    if (!Go)
+        // @ts-ignore
+        await import('./wasm_exec.mjs')
 
     const go = new Go()
     const instance = await wasmInit(go.importObject)
