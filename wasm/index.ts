@@ -22,6 +22,8 @@ globalThis.crypto = {
 	},
 };
 
+require("../dist/wasm_exec")
+
 export const newEasiGen = async () => {
     const instance = await wasmInit({})
     const go = new Go()
