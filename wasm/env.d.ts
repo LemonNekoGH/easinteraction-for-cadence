@@ -9,6 +9,7 @@ declare module "wasm_exec" {
 
 declare class Go {
     run(a: WebAssembly.Instance): Promise<any>
+    importObject: any
 }
 
 declare var doProcessForWasm: (source: string) => string

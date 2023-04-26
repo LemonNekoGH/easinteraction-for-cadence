@@ -26,8 +26,8 @@ export const newEasiGen = async () => {
     // @ts-ignore
     await import('./wasm_exec.mjs')
 
-    const instance = await wasmInit({})
     const go = new Go()
+    const instance = await wasmInit(go.importObject)
     await go.run(instance)
     return (source: string): string => {
         return globalThis.doProcessForWasm(source)
