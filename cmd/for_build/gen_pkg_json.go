@@ -19,6 +19,15 @@ func main() {
 		"license":     "MIT",
 		"homepage":    "https://docs.easi-gen.lemonneko.moe",
 		"repository":  "https://github.com/lemonneko/easi-gen",
+		"module":      "./easi-gen.es.js",
+		"main":        "./easi-gen.umd.js",
+		"exports": map[string]any{
+			".": map[string]any{
+				"require": "./easi-gen.umd.js",
+				"import":  "./easi-gen.es.js",
+			},
+		},
+		"types": "./index.d.ts",
 	}, "", "  ")
 	fmt.Printf("%s\n", out)
 }
