@@ -76,14 +76,14 @@ jobs:
           ver="${ver:1}"
           go run ./cmd/for_build/gen_pkg_json.go "$ver" > ./wasm/dist/package.json
           echo 'package.json generated'
-          cp ./README.md ./build/README.md
+          cp ./README.md ./wasm/dist/README.md
           echo 'README copied'
 
       - name: Publish
         uses: JS-DevTools/npm-publish@v2
         with:
           token: ${{ secrets.NPM_TOKEN }}
-          package: dist
+          package: wasm/dist
 
       - name: Send end message to telegram
         uses: appleboy/telegram-action@master
