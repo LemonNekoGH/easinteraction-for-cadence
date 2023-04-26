@@ -74,7 +74,7 @@ jobs:
         run: |
           ver='${{ github.ref_name }}'
           ver="${ver:1}"
-          go run ./cmd/easi-gen/for_build/gen-pkg_json.go "$ver" > ./wasm/dist/package.json
+          go run ./cmd/easi-gen/for_build/gen_pkg_json.go "$ver" > ./wasm/dist/package.json
           echo 'package.json generated'
           cp ./README.md ./build/README.md
           echo 'README copied'
