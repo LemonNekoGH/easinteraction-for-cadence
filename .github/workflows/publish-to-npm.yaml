@@ -35,7 +35,7 @@ jobs:
         run: |
           go build -o dist/easi-gen.wasm ./cmd/easi-gen/main_wasm.go
           echo 'easi-gen.wasm built'
-          cp $(go env GOROOT)/misc/wasm/wasm_exec.js dist/wasm_exec.js
+          cp $(go env GOROOT)/misc/wasm/wasm_exec.js ./wasm/wasm_exec.mjs
           echo 'wasm_exec.js copied'
 
       - uses: actions/setup-node@v3
