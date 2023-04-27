@@ -21,5 +21,6 @@ func doProcessForWasm(_ js.Value, args []js.Value) any {
 
 func main() {
 	js.Global().Set("doProcessForWasm", js.FuncOf(doProcessForWasm))
+	js.Global().Get("console").Call("log", "[GO] function doProcessForWasm injected")
 	select {}
 }

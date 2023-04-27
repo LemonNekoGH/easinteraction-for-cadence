@@ -2,8 +2,8 @@ declare module "*.wasm?init" {
     export default function (options: WebAssembly.Imports): Promise<WebAssembly.Instance>
 }
 
-declare module "wasm_exec" {
-    const value: never
+declare module "*.cdc?raw" {
+    const value: string
     export default value
 }
 

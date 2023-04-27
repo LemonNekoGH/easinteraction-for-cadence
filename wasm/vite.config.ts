@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
 
 export default defineConfig({
-  plugins: [,
+  plugins: [
     // 用于生成类型文件
     dts(),
   ],
