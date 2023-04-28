@@ -1,0 +1,99 @@
+name: Publish to npm
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  start:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send start message to telegram
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TG_TO }}
+          token: ${{ secrets.TG_TOKEN }}
+          format: markdown
+          message: |
+            GitHub Actions Start
+            Workflow Name: ${{ github.workflow }}
+            Url: https://github.com/LemonNekoGH/easinteraction-for-cadence
+            Trigger: `${{ github.ref_name }}` `${{ github.event.commits[0].id }}`
+  publish:
+    needs: start
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.18.x'
+
+      - name: Build wasm
+        env:
+          GOOS: js
+          GOARCH: wasm
+        run: |
+          go build -o dist/easi-gen.wasm ./cmd/easi-gen/main_wasm.go
+          echo 'easi-gen.wasm built'
+          cp $(go env GOROOT)/misc/wasm/wasm_exec.js ./wasm/wasm_exec.mjs
+          echo 'wasm_exec.js copied'
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - uses: pnpm/action-setup@v2
+        name: Install pnpm
+        id: pnpm-install
+        with:
+          version: 7
+          run_install: false
+
+      # used by dependencies cache
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: cd wasm && pnpm install
+
+      - name: Build js bundle
+        run: cd wasm && pnpm build
+
+      - name: Generate and copy files
+        run: |
+          ver='${{ github.ref_name }}'
+          ver="${ver:1}"
+          go run ./cmd/for_build/gen_pkg_json.go "$ver" > ./wasm/dist/package.json
+          echo 'package.json generated'
+          cp ./README.md ./wasm/dist/README.md
+          echo 'README copied'
+
+      - name: Publish
+        uses: JS-DevTools/npm-publish@v2
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: wasm/dist
+
+      - name: Send end message to telegram
+        uses: appleboy/telegram-action@master
+        if: always()
+        with:
+          to: ${{ secrets.TG_TO }}
+          token: ${{ secrets.TG_TOKEN }}
+          format: markdown
+          message: |
+            GitHub Actions End
+            Workflow Name: ${{ github.workflow }}
+            Url: https://github.com/LemonNekoGH/easinteraction-for-cadence
+            Trigger: `${{ github.ref_name }}` `${{ github.event.commits[0].id }}`

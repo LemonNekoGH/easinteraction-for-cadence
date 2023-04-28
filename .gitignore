@@ -3,3 +3,7 @@
 .DS_Store
 ._*
 coverage.txt
+node_modules/
+dist/
+# for act: local run github actions
+.secrets
