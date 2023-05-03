@@ -12,4 +12,4 @@ declare class Go {
     importObject: any
 }
 
-declare var doProcessForWasm: (source: string) => string
+declare var doProcessForWasm: (source: string, ignoreContractGeneration: boolean) => string

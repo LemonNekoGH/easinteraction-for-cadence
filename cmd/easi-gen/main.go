@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+
 	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/cmd_shared"
 	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/types"
 	"github.com/spf13/cobra"
-	"io"
-	"os"
 )
 
 // Version 用于注入版本号
@@ -81,7 +82,7 @@ func runCommand0(source, output, pkgName string) error {
 				continue
 			}
 
-			err2 = cmd_shared.DoProcess(inputReader, outWriter, pkgName)
+			err2 = cmd_shared.DoProcess(inputReader, outWriter, pkgName, false)
 			if err2 != nil {
 				fmt.Println("process failed, skipped: " + s)
 				fmt.Println("	error: " + err2.Error())
@@ -107,7 +108,7 @@ func runCommand0(source, output, pkgName string) error {
 	}
 
 	// do process
-	err = cmd_shared.DoProcess(sourceBuffer, outputWriter, pkgName) // sourceReader is EOF, use sourceBuffer instead, or use io.TeeReader. https://stackoverflow.com/questions/39791021/how-to-read-multiple-times-from-same-io-reader
+	err = cmd_shared.DoProcess(sourceBuffer, outputWriter, pkgName, false) // sourceReader is EOF, use sourceBuffer instead, or use io.TeeReader. https://stackoverflow.com/questions/39791021/how-to-read-multiple-times-from-same-io-reader
 	if err != nil {
 		fmt.Println("process failed, skipped: " + source)
 		fmt.Println("	error: " + err.Error())

@@ -5,13 +5,14 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"go/format"
+
 	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/gen/templates"
 	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/types"
 	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/pkg/string_utils"
 	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/pkg/typeconv"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"go/format"
 )
 
 var (
@@ -19,15 +20,17 @@ var (
 )
 
 type Generator struct {
-	pkgName  string
-	contract *ast.CompositeDeclaration
-	output   *bytes.Buffer
+	pkgName                  string
+	contract                 *ast.CompositeDeclaration
+	output                   *bytes.Buffer
+	ignoreContractGeneration bool
 }
 
-func NewGenerator(pkgName string) *Generator {
+func NewGenerator(pkgName string, ignoreContractGeneration bool) *Generator {
 	return &Generator{
-		pkgName: pkgName,
-		output:  bytes.NewBuffer([]byte{}),
+		pkgName:                  pkgName,
+		output:                   bytes.NewBuffer([]byte{}),
+		ignoreContractGeneration: ignoreContractGeneration,
 	}
 }
 
@@ -192,6 +195,7 @@ func (g *Generator) Gen(cdc *ast.Program) error {
 	top := collectCompositeType(g.contract, "")
 	contract := top.(*types.Contract)
 	contract.PkgName = g.pkgName
+	contract.IgnoreContractGeneration = g.ignoreContractGeneration
 	contract.FlattenSubTypes() // flatten all nested subtypes
 	assignGoTypes(contract)
 
@@ -201,7 +205,7 @@ func (g *Generator) Gen(cdc *ast.Program) error {
 		return err
 	}
 	// format code
-	formatted, err := format.Source(g.output.Bytes())
+	formatted, err := format.Source(bytes.TrimSpace(g.output.Bytes()))
 	if err != nil {
 		return err
 	}

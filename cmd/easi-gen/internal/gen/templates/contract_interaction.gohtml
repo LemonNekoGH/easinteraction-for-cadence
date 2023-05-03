@@ -1,4 +1,5 @@
 {{- /*gotype: github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/types.CompositeType*/ -}}
+{{if not .IgnoreContractGeneration}}
 package {{.PkgName}}
 
 import (
@@ -10,6 +11,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/lemonnekogh/godence"
 )
+{{end}}
 
 {{define "CompositeType"}}
 type {{.GetGoName}} struct {
@@ -18,8 +20,7 @@ type {{.GetGoName}} struct {
 	flowCli *flowGrpc.Client
 	{{else}}
 	{{range .GetFields}}
-	{{.GoName}} {{.GoType}} `godence:"{{.Name}}"`
-	{{end}}
+	{{.GoName}} {{.GoType}} `godence:"{{.Name}}"`{{end}}
 	{{end}}
 }
 
@@ -156,8 +157,10 @@ func (c *{{$typeName}}) {{$fn.GoName}}(
 {{end}}
 {{end}}
 
+{{if not .IgnoreContractGeneration}}
 {{- /* Contract */ -}}
 {{template "CompositeType" .}}
+{{end}}
 
 {{- /* Sub types */ -}}
 {{range .GetSubTypes}}
