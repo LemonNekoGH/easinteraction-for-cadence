@@ -7,3 +7,5 @@ node_modules/
 dist/
 # for act: local run github actions
 .secrets
+# VSCode
+.vscode

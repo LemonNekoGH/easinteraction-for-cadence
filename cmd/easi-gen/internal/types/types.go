@@ -3,11 +3,12 @@ package types
 import (
 	"bytes"
 	"fmt"
-	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/gen/templates"
-	"github.com/onflow/cadence/runtime/common"
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/gen/templates"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type CompositeType interface {
@@ -84,7 +85,8 @@ func (c *compositeTypeImpl) SetOwnerType(owner string) {
 
 type Contract struct {
 	compositeTypeImpl
-	PkgName string
+	PkgName                  string
+	IgnoreContractGeneration bool
 }
 
 func (c *Contract) GetGoName() string {

@@ -5,7 +5,7 @@ import { go } from './wasm_exec.js'
 export const newEasiGen = async () => {
     const instance = await wasmInit(go.importObject)
     go.run(instance).then()
-    return (source: string): string => {
-        return doProcessForWasm(source)
+    return (source: string, ignoreContractGeneration: boolean): string => {
+        return doProcessForWasm(source, ignoreContractGeneration)
     }
 }

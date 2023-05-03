@@ -3,14 +3,15 @@ package cmd_shared
 import (
 	"bytes"
 	"errors"
-	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/gen"
-	"github.com/onflow/cadence/runtime/parser"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/LemonNekoGH/easinteraction-for-cadence/cmd/easi-gen/internal/gen"
+	"github.com/onflow/cadence/runtime/parser"
 )
 
-func DoProcess(source io.Reader, output io.Writer, pkgName string) error {
+func DoProcess(source io.Reader, output io.Writer, pkgName string, ignoreContractGeneration bool) error {
 	// read cadence content
 	sInput := bytes.NewBuffer([]byte{})
 	_, err := io.Copy(sInput, source)
@@ -23,7 +24,7 @@ func DoProcess(source io.Reader, output io.Writer, pkgName string) error {
 		return err
 	}
 	// gen golang code
-	g := gen.NewGenerator(pkgName)
+	g := gen.NewGenerator(pkgName, ignoreContractGeneration)
 	if err = g.Gen(cdc); err != nil {
 		return err
 	}

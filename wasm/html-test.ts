@@ -5,7 +5,7 @@ const main = async() => {
     const gen = await newEasiGen()
     const output = document.createElement('div')
     document.body.append(output)
-    output.innerHTML = `<pre>${gen(userProfiles)}</pre>`
+    output.innerHTML = `<pre>${gen(userProfiles, true)}</pre>`
 }
 
 window.onload = main
