@@ -44,7 +44,7 @@ jobs:
       - name: Generate Checksum
         run: |
           shasum -a 256 easi-gen-windows-amd64.exe > easi-gen-windows-amd64.exe.sha256sum
-          echo "windows-check-sum=$(shasum -a 256 easi-gen-windows-amd64.exe | awk 'print $1')" >> "$GITHUB_OUTPUT" # for chocolatey publishing
+          echo "windows-check-sum=$(shasum -a 256 easi-gen-windows-amd64.exe | awk '{print $1}')" >> "$GITHUB_OUTPUT" # for chocolatey publishing
           shasum -a 256 easi-gen-linux-amd64 > easi-gen-linux-amd64.sha256sum
           shasum -a 256 easi-gen-macos-arm64 > easi-gen-macos-arm64.sha256sum
       - name: Create Release
