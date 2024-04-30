@@ -4,6 +4,9 @@ on:
     tags:
       - '*'
 
+permissions:
+  contents: write # for release
+
 env:
   GO_VERSION: '1.18.x'
 
