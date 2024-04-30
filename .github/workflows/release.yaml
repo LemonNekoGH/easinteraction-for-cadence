@@ -89,7 +89,8 @@ jobs:
           git push origin HEAD:main
 
   publish-to-chocolatey:
-    needs: create-release
+    needs: 
+      - create-release
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -99,7 +100,9 @@ jobs:
       - name: Generate the nuspec file
         run: go run ./cmd/for_build/gen_choco_nuspec.go ${{ github.ref_name }} > easi-gen.nuspec
       - name: Generate the install script
-        run: go run ./cmd/for_build/gen_choco_install_script.go ${{ github.ref_name }} ${{ needs.create-release.outputs.windows-check-sum }} > choco/chocolateyInstall.ps1
+        run: |
+          mkdir choco
+          go run ./cmd/for_build/gen_choco_install_script.go ${{ github.ref_name }} ${{ needs.create-release.outputs.windows-check-sum }} > choco/chocolateyInstall.ps1
       - name: Install Chocolatey
         shell: pwsh
         run: Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
