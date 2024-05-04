@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	_ "embed"
 	"fmt"
 	"io"
@@ -11,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -92,12 +90,6 @@ func Test_runCommand(t *testing.T) {
 		fmt.Printf("%s\n", out)
 		r.Empty(err)
 	}
-	// start flow emulator
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	err = exec.CommandContext(ctx, "bash", "-c", fmt.Sprintf("cd %s && flow emulator", dir)).Start()
-	r.Empty(err)
-	time.Sleep(5 * time.Second)
 	// deploy
 	out, err = exec.Command("bash", "-c", fmt.Sprintf("cd %s && flow deploy --update", dir)).CombinedOutput() // if failed at this line, go to system process manager and kill it
 	fmt.Printf("%s\n", out)

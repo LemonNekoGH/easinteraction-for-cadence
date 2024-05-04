@@ -28,7 +28,6 @@ jobs:
             Url: https://github.com/LemonNekoGH/easinteraction-for-cadence
             Trigger: `${{ github.event.ref }}` `${{ github.event.commits[0].id }}`
   unittest:
-    needs: start
     runs-on: ubuntu-latest
     services:
       # Set up flow emulator
@@ -52,7 +51,7 @@ jobs:
         run: |
           sh -ci "$(curl -fsSL https://storage.googleapis.com/flow-cli/install.sh)"
           flow version
-      # Scan for protential mistakes
+      # Scan for potential mistakes
       - name: Vet
         run: |
           go vet ./cmd/easi-gen/...
