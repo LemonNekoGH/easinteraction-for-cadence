@@ -110,7 +110,7 @@ jobs:
       - name: Push to Chocolatey
         run: |
           choco pack easi-gen.nuspec
-          choco install easi-gen --version="0.0.40" --source="D:\a\easinteraction-for-cadence\easinteraction-for-cadence"
+          choco install easi-gen --version="${{ github.ref_name }}" --source="D:\a\easinteraction-for-cadence\easinteraction-for-cadence"
           choco apikey --key ${{ secrets.CHOCO_API_KEY }} --source https://push.chocolatey.org/
           choco push easi-gen.${{ github.ref_name }}.nupkg --source https://push.chocolatey.org/
 
