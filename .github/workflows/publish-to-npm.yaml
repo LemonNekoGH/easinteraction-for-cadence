@@ -72,9 +72,7 @@ jobs:
 
       - name: Generate and copy files
         run: |
-          ver='${{ github.ref_name }}'
-          ver="${ver:1}"
-          go run ./cmd/for_build/gen_pkg_json.go "$ver" > ./wasm/dist/package.json
+          go run ./cmd/for_build/gen_pkg_json.go ${{ github.ref_name }} > ./wasm/dist/package.json
           echo 'package.json generated'
           cp ./README.md ./wasm/dist/README.md
           echo 'README copied'

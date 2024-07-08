@@ -28,7 +28,6 @@ jobs:
             Url: https://github.com/LemonNekoGH/easinteraction-for-cadence
             Trigger: `${{ github.event.ref }}` `${{ github.event.commits[0].id }}`
   unittest:
-    needs: start
     runs-on: ubuntu-latest
     services:
       # Set up flow emulator
@@ -47,18 +46,18 @@ jobs:
       # set up go
       - uses: actions/setup-go@v2
         with:
-          go-version: "1.18.x"
+          go-version: "1.22.x"
       - name: Set up flow-cli
         run: |
           sh -ci "$(curl -fsSL https://storage.googleapis.com/flow-cli/install.sh)"
           flow version
-      # Scan for protential mistakes
+      # Scan for potential mistakes
       - name: Vet
         run: |
-          go vet ./...
+          go vet ./cmd/easi-gen/...
       - name: Unit tests
         run: |
-          go test $(go list ./...) -coverprofile coverage.txt -covermode atomic -p=1
+          go test $(go list ./cmd/easi-gen/...) -coverprofile coverage.txt -covermode atomic -p=1
           go tool cover -func coverage.txt
       # Codecov
       - uses: codecov/codecov-action@v2

@@ -1,0 +1,134 @@
+name: Release
+on:
+  push:
+    tags:
+      - '*'
+
+permissions:
+  contents: write # for release
+
+env:
+  GO_VERSION: '1.22.x'
+
+jobs:
+  start:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send start message to telegram
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TG_TO }}
+          token: ${{ secrets.TG_TOKEN }}
+          format: markdown
+          message: |
+            GitHub Actions Start
+            Workflow Name: ${{ github.workflow }}
+            Url: https://github.com/LemonNekoGH/easinteraction-for-cadence
+            Trigger: `${{ github.ref_name }}` `${{ github.event.commits[0].id }}`
+
+  create-release:
+    needs: start
+    runs-on: ubuntu-latest
+    outputs:
+      windows-check-sum: ${{ steps.generate_checksum.outputs.windows-check-sum }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Build the binary
+        run: |
+          GOOS=windows GOARCH=amd64 go build -o easi-gen-windows-amd64.exe ./cmd/easi-gen/main.go
+          GOOS=linux GOARCH=amd64 go build -o easi-gen-linux-amd64 ./cmd/easi-gen/main.go
+          GOOS=darwin GOARCH=arm64 go build -o easi-gen-macos-arm64 ./cmd/easi-gen/main.go
+      - name: Generate Checksum
+        id: generate_checksum
+        run: |
+          shasum -a 256 easi-gen-windows-amd64.exe > easi-gen-windows-amd64.exe.sha256sum
+          echo "windows-check-sum=$(shasum -a 256 easi-gen-windows-amd64.exe | awk '{print $1}')" >> "$GITHUB_OUTPUT" # for chocolatey publishing
+          shasum -a 256 easi-gen-linux-amd64 > easi-gen-linux-amd64.sha256sum
+          shasum -a 256 easi-gen-macos-arm64 > easi-gen-macos-arm64.sha256sum
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            easi-gen-windows-amd64.exe
+            easi-gen-linux-amd64
+            easi-gen-macos-arm64
+            easi-gen-windows-amd64.exe.sha256sum
+            easi-gen-linux-amd64.sha256sum
+            easi-gen-macos-arm64.sha256sum
+          generate_release_notes: true
+
+  publish-to-homebrew:
+    needs: start
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: LemonNekoGH/tap
+          token: ${{ secrets.PAT }}
+      - uses: LemonNekoGH/update-homebrew-formula-action@v0.1.0
+        with:
+          tag: '${{ github.ref_name }}'
+          description: Help users to generate code for easier contract interaction
+          formula-name: EasiGen
+          command-name: easi-gen
+          url: https://github.com/LemonNekoGH/easinteraction-for-cadence
+          homepage: https://github.com/LemonNekoGH/easinteraction-for-cadence
+          license-name: MIT
+          build-type: Go
+          main: ./cmd/easi-gen/main.go
+          ldflags: -X 'main.Version=#{version}'
+      - name: Commit and push
+        run: |
+          git config user.email ${{ github.event.pusher.email }}
+          git config user.name ${{ github.event.pusher.name }}
+          git add Formula/easi-gen.rb
+          git commit -m '[AUTO] Bump easi-gen version to ${{ github.ref_name }}'
+          git push origin HEAD:main
+
+  publish-to-chocolatey:
+    needs: 
+      - create-release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Generate the nuspec file
+        run: go run ./cmd/for_build/gen_choco_nuspec.go ${{ github.ref_name }} > easi-gen.nuspec
+      - name: Generate the install script
+        run: |
+          mkdir choco
+          go run ./cmd/for_build/gen_choco_install_script.go ${{ github.ref_name }} ${{ needs.create-release.outputs.windows-check-sum }} > choco/chocolateyInstall.ps1
+      - name: Install Chocolatey
+        shell: pwsh
+        run: Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+      - name: Push to Chocolatey
+        run: |
+          choco pack easi-gen.nuspec
+          choco install easi-gen --version="${{ github.ref_name }}" --source="D:\a\easinteraction-for-cadence\easinteraction-for-cadence"
+          choco apikey --key ${{ secrets.CHOCO_API_KEY }} --source https://push.chocolatey.org/
+          choco push easi-gen.${{ github.ref_name }}.nupkg --source https://push.chocolatey.org/
+
+  end:
+    needs:
+      - publish-to-chocolatey
+      - publish-to-homebrew
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send end message to telegram
+        uses: appleboy/telegram-action@master
+        if: ${{ always() }}
+        with:
+          to: ${{ secrets.TG_TO }}
+          token: ${{ secrets.TG_TOKEN }}
+          format: markdown
+          message: |
+            GitHub Actions End
+            Workflow Name: ${{ github.workflow }}
+            Url: https://github.com/LemonNekoGH/easinteraction-for-cadence
+            Trigger: `${{ github.ref_name }}` `${{ github.event.commits[0].id }}`
